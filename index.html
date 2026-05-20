@@ -152,9 +152,8 @@ const CONFIG = {
   // PDF 파일명 (slideshow.html과 같은 폴더). 실제 파일명으로 바꿔도 됨.
   pdfFile: 'deck.pdf',
 
-  // HTML 슬라이드 파일명 패턴: 1.html, 2.html, ... 순서대로 자동 탐색
-  htmlPattern: (n) => `${n}.html`,
-  // 첫 번째로 못 찾은 번호에서 탐색 중단 (최대 maxProbe까지)
+  // HTML 슬라이드 파일명 규칙: 1.html, 2.html, ... 순서대로 자동 탐색
+  // (대소문자 .html / .HTML 모두 인식. 첫 번째 못 찾은 번호에서 중단)
   maxProbe: 99,
 
   // PDF 렌더링 해상도 배율 (2.0 권장)
@@ -183,31 +182,31 @@ let totalSlides = 0;
 let currentIdx = 0;
 const slides = [];
 
-// HEAD 요청으로 파일 존재 확인 (HTTP 서버 환경에서 동작)
+// 파일 존재 확인 (HEAD 안 통하는 서버 대비 GET 사용)
 async function fileExists(url) {
   try {
-    const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+    const res = await fetch(url, { cache: 'no-store' });
     return res.ok;
   } catch (e) {
-    // fetch 자체가 실패한 경우 (file:// 등) — GET으로 재시도
-    try {
-      const res = await fetch(url, { method: 'GET', cache: 'no-store' });
-      return res.ok;
-    } catch (e2) {
-      return false;
-    }
+    return false;
   }
 }
 
 async function probeHtmlFiles() {
   const found = [];
   for (let n = 1; n <= CONFIG.maxProbe; n++) {
-    const name = CONFIG.htmlPattern(n);
-    statusEl.textContent = `HTML 탐색 중... ${name}`;
-    const ok = await fileExists(name);
-    if (!ok) break;
-    found.push(name);
+    let hit = null;
+    // 대소문자 둘 다 시도 (.html, .HTML)
+    for (const ext of ['html', 'HTML']) {
+      const name = `${n}.${ext}`;
+      statusEl.textContent = `HTML 탐색 중... ${name}`;
+      if (await fileExists(name)) { hit = name; break; }
+    }
+    console.log(`[probe] ${n}:`, hit || '— NOT FOUND, 탐색 종료');
+    if (!hit) break;
+    found.push(hit);
   }
+  console.log(`[probe] 총 ${found.length}개 HTML 발견:`, found);
   return found;
 }
 
@@ -329,15 +328,45 @@ function prev() { showSlide(currentIdx - 1); }
 
 function handleKey(e) {
   if (['ArrowDown', 'PageDown', ' '].includes(e.key)) {
-    e.preventDefault(); next();
-  } else if (['ArrowUp', 'PageUp'].includes(e.key)) {
-    e.preventDefault(); prev();
-  } else if (e.key === 'Home') {
-    e.preventDefault(); showSlide(0);
-  } else if (e.key === 'End') {
-    e.preventDefault(); showSlide(totalSlides - 1);
+    e.preventDefault(); next(); return;
   }
-  // ← → 는 iframe 내부 JS에서 사용하므로 가로채지 않음
+  if (['ArrowUp', 'PageUp'].includes(e.key)) {
+    e.preventDefault(); prev(); return;
+  }
+  if (e.key === 'Home') { e.preventDefault(); showSlide(0); return; }
+  if (e.key === 'End') { e.preventDefault(); showSlide(totalSlides - 1); return; }
+  // 그 외 키(← →, 스페이스 이외 등)는 활성 iframe으로 전달
+  forwardKeyToIframe(e);
+}
+
+function forwardKeyToIframe(srcEvent) {
+  if (srcEvent._fwd) return; // 이미 forward된 이벤트는 재전송 안 함
+  const slide = slides[currentIdx];
+  if (!slide || slide.type !== 'html') return;
+  const iframe = slide.element.querySelector('iframe');
+  if (!iframe || !iframe.contentWindow) return;
+
+  let doc;
+  try { doc = iframe.contentDocument; } catch (e) { return; }
+  if (!doc) return;
+
+  // 이미 iframe 내부에서 발생한 이벤트면 다시 보내지 않음 (중복 방지)
+  try { if (srcEvent.view === iframe.contentWindow) return; } catch (e) {}
+
+  try {
+    const Evt = iframe.contentWindow.KeyboardEvent || KeyboardEvent;
+    const evt = new Evt('keydown', {
+      key: srcEvent.key, code: srcEvent.code,
+      keyCode: srcEvent.keyCode, which: srcEvent.which,
+      bubbles: true, cancelable: true,
+      altKey: srcEvent.altKey, ctrlKey: srcEvent.ctrlKey,
+      shiftKey: srcEvent.shiftKey, metaKey: srcEvent.metaKey,
+    });
+    evt._fwd = true;
+    doc.dispatchEvent(evt);
+  } catch (err) {
+    console.warn('iframe 키 전달 실패:', err);
+  }
 }
 
 document.addEventListener('keydown', handleKey);
