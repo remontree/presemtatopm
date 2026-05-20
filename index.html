@@ -11,7 +11,7 @@
   --start-bg-to: #1a3a6e;
   --accent: #0f62fe;
   --accent-hover: #0353e9;
-  --text: #fff;찐_최종_발표_자료
+  --text: #fff;
   --text-muted: #a0b8d8;
 }
 
@@ -144,7 +144,8 @@ html, body {
   <button id="exit-btn">EXIT (ESC)</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+        onerror="document.getElementById('status').textContent='PDF.js 라이브러리 로드 실패 (네트워크 확인)';"></script>
 <script>
 // ============== CONFIG ==============
 const CONFIG = {
@@ -161,8 +162,12 @@ const CONFIG = {
 };
 // ====================================
 
+if (typeof pdfjsLib === 'undefined') {
+  document.getElementById('status').textContent = 'PDF.js 로드 실패 — 페이지를 새로고침하세요';
+  throw new Error('pdfjsLib not loaded');
+}
 pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const stage = document.getElementById('stage');
 const startScreen = document.getElementById('start-screen');
