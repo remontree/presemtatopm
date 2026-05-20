@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIERA — SE Hub 실시간 변동성 검증 (16:9)</title>
+    <!-- Font Awesome 6.5.1 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    <!-- GSAP for Smooth Animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+        /* ─── Base Variables and Reset ─── */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #e5e5e5;
+            font-family: 'IBM Plex Sans', 'Pretendard', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .slide-wrapper {
+            width: 1280px;
+            height: 720px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+            transform-origin: center center;
+            overflow: hidden;
+            padding: 40px 60px; 
+        }
+
+        /* ─── Header Styles ─── */
+        .header-area {
+            position: relative;
+            z-index: 100;
+            margin-bottom: 20px;
+        }
+        .kicker {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #0f62fe;
+            margin-bottom: 6px;
+            display: inline-block;
+        }
+        .main-title {
+            font-size: 40px;
+            font-weight: 200;
+            color: #161616;
+            line-height: 1.25;
+            letter-spacing: -0.015em;
+        }
+        .main-title strong { font-weight: 700; color: #0f62fe; }
+
+        /* ─── Canvas Layer ─── */
+        .scene-canvas {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+        #line-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* ─── Card Components (Carbon Style - GRAPHIC FOCUSED) ─── */
+        .carbon-card {
+            position: absolute;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 16px 32px rgba(0,0,0,0.06);
+            opacity: 0;
+            z-index: 20;
+            border-radius: 0;
+        }
+        .cc-header {
+            padding: 16px 20px;
+            background: #f4f4f4;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 16px;
+            font-weight: 700;
+            color: #161616;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: -0.01em;
+        }
+        
+        /* ─── Step 1: Requirement Card (Huge Icon Focus) ─── */
+        #card-req { 
+            width: 340px; 
+            top: 60px; /* 위치 상향 조정하여 하단 쏠림 방지 */
+            left: -500px; 
+            border-left: 8px solid #161616; 
+        }
+        .req-hero {
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 16px;
+        }
+        .req-icon-giant {
+            font-size: 80px; /* 과도한 팽창 방지 */
+            color: #0f62fe;
+            text-shadow: 0 10px 20px rgba(15, 98, 254, 0.2);
+        }
+        .req-text-group { display: flex; flex-direction: column; gap: 8px; }
+        .req-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #525252;
+            letter-spacing: 0.05em;
+        }
+        .req-limit {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 26px;
+            font-weight: 700;
+            color: #161616;
+            background: #f4f4f4;
+            padding: 8px 16px;
+            border: 2px solid #161616;
+        }
+
+        /* ─── Step 1 & 2: BOM Card (Tile Based UI) ─── */
+        #card-bom { 
+            width: 580px; /* 내부 요소 깨짐 방지를 위해 넓이 확장 */
+            top: 30px; /* 상단으로 끌어올려 레이아웃 안정화 */
+            right: -600px; 
+            border-left: 8px solid #8d8d8d; 
+        }
+        .cc-body-bom { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* Tile Grid */
+        .bom-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .bom-tile {
+            background: #ffffff;
+            border: 1px solid #c6c6c6;
+            padding: 16px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        .bt-icon {
+            font-size: 40px; 
+            color: #161616;
+            transition: color 0.3s ease;
+        }
+        .bt-name { font-size: 14px; font-weight: 700; color: #525252; }
+        .bt-price {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            color: #0f62fe;
+            white-space: nowrap;
+        }
+
+        /* 에러 발생 시 RAM 타일 강조 */
+        .target-ram.flash-red {
+            background: #fff1f1;
+            border: 2px solid #da1e28;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(218, 30, 40, 0.15);
+        }
+        .target-ram.flash-red .bt-icon { color: #da1e28; }
+        .target-ram.flash-red .bt-price { color: #da1e28; font-weight: 700; }
+        .target-ram.flash-red .bt-name { color: #da1e28; }
+
+        /* ─── Budget Progress Bar ─── */
+        .bom-total-area { display: flex; flex-direction: column; gap: 24px; } /* 간격 확장하여 겹침 방지 */
+        .bom-total { display: flex; justify-content: space-between; align-items: flex-end; }
+        .bt-label { font-size: 18px; font-weight: 700; color: #161616; }
+        .bt-val-wrapper { font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 700; color: #161616; line-height: 1;}
+        .bt-val-wrapper span.currency { font-size: 20px; font-family: 'Pretendard', sans-serif;}
+        
+        .budget-track {
+            height: 12px; background: #e0e0e0; width: 100%; position: relative; margin-bottom: 20px;
+        }
+        .budget-bar {
+            height: 100%; width: 0%; background: #0f62fe; transition: width 0.5s ease, background 0.3s ease;
+        }
+        .budget-limit-line {
+            position: absolute; top: -8px; bottom: -8px; width: 3px; background: #da1e28; z-index: 2;
+        }
+        .budget-limit-text {
+            /* 겹침을 방지하기 위해 마진을 주고 텍스트를 더 아래로 내림 */
+            position: absolute; top: 26px; transform: translateX(-50%); font-size: 13px; font-weight: 700; color: #da1e28; white-space: nowrap;
+        }
+        
+        .verify-badge {
+            padding: 16px; text-align: center; font-size: 18px; font-weight: 700; color: #ffffff;
+            transition: background 0.3s; display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        .v-pass { background: #198038; }
+        .v-fail { background: #da1e28; }
+
+        /* ─── Step 2: External API Node ─── */
+        #node-api {
+            position: absolute; bottom: -200px; left: 60px; background: #ffffff; border: 2px solid #da1e28;
+            padding: 16px 24px; font-size: 16px; font-weight: 700; color: #da1e28;
+            display: flex; align-items: center; gap: 12px; box-shadow: 0 8px 20px rgba(218, 30, 40, 0.15);
+            z-index: 25; opacity: 0;
+        }
+        #node-api i { font-size: 24px; }
+
+        /* ─── Step 3: Conflict Warning Popup (SE Hub) ─── */
+        #conflict-popup {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8);
+            width: 440px; background: #ffffff; border: 1px solid #e0e0e0; border-left: 8px solid #da1e28;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.15); z-index: 50; opacity: 0; display: flex; flex-direction: column; pointer-events: none;
+        }
+        .cp-header {
+            background: #fff1f1; color: #da1e28; padding: 16px 20px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #ffd7d9;
+        }
+        .cp-body { padding: 24px; color: #161616; font-size: 16px; line-height: 1.5; word-break: keep-all; }
+        .cp-body strong { color: #da1e28; font-weight: 700; }
+
+        /* ─── Step 4: 5x4 Matrix Container ─── */
+        #matrix-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr);
+            gap: 12px; padding-top: 20px; opacity: 0; pointer-events: none; z-index: 50;
+        }
+        .m-card {
+            background: #ffffff; border: 1px solid #e0e0e0; border-top: 3px solid #8d8d8d;
+            padding: 16px 12px; display: flex; flex-direction: column; justify-content: center;
+            opacity: 0; transform: translateY(20px);
+        }
+        .m-icon { font-size: 20px; color: #0f62fe; margin-bottom: 10px; }
+        .m-title { font-size: 14px; font-weight: 700; color: #161616; line-height: 1.3; word-break: keep-all;}
+        .m-sub { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8d8d8d; margin-top: 4px;}
+    </style>
+</head>
+<body>
+
+<main class="slide-wrapper" id="slide-wrapper">
+    <header class="header-area">
+        <div class="kicker">APPENDIX</div>
+        <h2 class="main-title">
+            외부 환경의 불확실성을 방어하다,<br/>
+            <strong>SE Hub (실시간 변동성 검증)</strong>
+        </h2>
+    </header>
+
+    <section class="scene-canvas">
+        <svg id="line-layer">
+            <defs>
+                <marker id="arrowGray" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <polygon points="0 0, 8 4, 0 8" fill="#8d8d8d" />
+                </marker>
+                <marker id="arrowRed" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <polygon points="0 0, 8 4, 0 8" fill="#da1e28" />
+                </marker>
+                <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <polygon points="0 0, 8 4, 0 8" fill="#0f62fe" />
+                </marker>
+            </defs>
+            <g id="dynamic-lines"></g>
+        </svg>
+
+        <!-- Step 1: Req (Huge Icon) -->
+        <article class="carbon-card" id="card-req">
+            <div class="cc-header"><i class="fa-solid fa-scale-balanced"></i> 예산 제약 요구사항</div>
+            <div class="req-hero">
+                <i class="fa-solid fa-sack-dollar req-icon-giant"></i>
+                <div class="req-text-group">
+                    <div class="req-label">예산 상한선 (BUDGET LIMIT)</div>
+                    <div class="req-limit">≤ 3,000,000 ₩</div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Step 1: BOM (Tile UI) -->
+        <article class="carbon-card" id="card-bom">
+            <div class="cc-header"><i class="fa-solid fa-cubes"></i> 시스템 부품 구성 (BOM)</div>
+            <div class="cc-body-bom">
+                
+                <!-- 직관적인 그래픽 타일들 -->
+                <div class="bom-grid">
+                    <div class="bom-tile">
+                        <i class="fa-solid fa-microchip bt-icon"></i>
+                        <div class="bt-name">Core CPU</div>
+                        <div class="bt-price">1,000,000 ₩</div>
+                    </div>
+                    <div class="bom-tile">
+                        <i class="fa-solid fa-video bt-icon"></i>
+                        <div class="bt-name">GPU 4080</div>
+                        <div class="bt-price">1,500,000 ₩</div>
+                    </div>
+                    <div class="bom-tile target-ram" id="tile-ram">
+                        <i class="fa-solid fa-memory bt-icon" id="icon-ram"></i>
+                        <div class="bt-name">DDR5 RAM</div>
+                        <div class="bt-price"><span id="val-ram">300,000</span> ₩</div>
+                    </div>
+                </div>
+                
+                <!-- 예산 프로그레스 및 한계선 시각화 -->
+                <div class="bom-total-area">
+                    <div class="bom-total">
+                        <span class="bt-label">총 예상 비용</span>
+                        <div class="bt-val-wrapper"><span id="val-total">2,800,000</span> <span class="currency">₩</span></div>
+                    </div>
+                    <div class="budget-track">
+                        <!-- 예산 300만원 한계선 (300만 / 350만 기준 = 85.7%) -->
+                        <div class="budget-limit-text" style="left: 85.7%;">Limit: 3M</div>
+                        <div class="budget-limit-line" style="left: 85.7%;"></div>
+                        <!-- 초기 상태: 280만 (280/350 = 80%) -->
+                        <div class="budget-bar" id="budget-bar" style="width: 80%; background: #0f62fe;"></div> 
+                    </div>
+                </div>
+
+                <div class="verify-badge v-pass" id="badge-status">
+                    <i class="fa-solid fa-circle-check"></i> 검증 통과 (PASS)
+                </div>
+            </div>
+        </article>
+
+        <!-- Step 2: External Shock -->
+        <div id="node-api">
+            <i class="fa-solid fa-arrow-trend-up"></i> 글로벌 RAM 가격 폭등 감지
+        </div>
+
+        <!-- Step 3: Conflict Warning Popup -->
+        <div id="conflict-popup">
+            <div class="cp-header"><i class="fa-solid fa-triangle-exclamation"></i> SE Hub 실시간 요구사항 검증 경고</div>
+            <div class="cp-body">
+                외부 시장 요인(RAM 가격 폭등)으로 인해 설계 <strong>예산 상한선(3,000,000 ₩)을 초과</strong>하였습니다.<br><br>
+                <span style="font-size: 13px; color: #8d8d8d;"><i class="fa-solid fa-circle-info"></i> SE Hub API 모니터링 시스템 자동 감지</span>
+            </div>
+        </div>
+
+        <!-- Step 4: 5x4 Matrix -->
+        <div id="matrix-container"></div>
+
+    </section>
+</main>
+
+<script>
+    /* ─── STREAMING_CHUNK:Initialization and Scaling ─── */
+    let currentStep = 0;
+    const maxSteps = 4;
+    let stepTl = null; 
+    let activeConnections = []; 
+
+    function scaleSlide() {
+        const slide = document.getElementById('slide-wrapper');
+        const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720) * 0.95; 
+        slide.style.transform = `scale(${scale})`;
+    }
+
+    window.onload = () => {
+        scaleSlide();
+        initMatrixData();
+        document.addEventListener('keydown', handleKeydown);
+        gsap.ticker.add(drawConnections); 
+    };
+    window.addEventListener('resize', scaleSlide);
+
+    /* ─── STREAMING_CHUNK:Dynamic Line Drawing System ─── */
+    function createConnection(el1Id, el2Id, color, marker, stroke = 3, dash = "") {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', stroke); 
+        if (dash) path.setAttribute('stroke-dasharray', dash);
+        if (marker) path.setAttribute('marker-end', `url(#${marker})`);
+        
+        document.getElementById('dynamic-lines').appendChild(path);
+        
+        const conn = { el1: el1Id, el2: el2Id, path: path, progress: 0 };
+        activeConnections.push(conn);
+        return conn;
+    }
+
+    function drawConnections() {
+        const canvasRect = document.querySelector('.scene-canvas').getBoundingClientRect();
+
+        activeConnections.forEach(conn => {
+            if (conn.progress === 0) { conn.path.style.opacity = 0; return; }
+            conn.path.style.opacity = 1;
+
+            const el1 = document.getElementById(conn.el1);
+            const el2 = document.getElementById(conn.el2);
+            if(!el1 || !el2) return;
+
+            const rect1 = el1.getBoundingClientRect();
+            const rect2 = el2.getBoundingClientRect();
+
+            // 중심점 계산
+            const cx1 = (rect1.left + rect1.right) / 2 - canvasRect.left;
+            const cy1 = (rect1.top + rect1.bottom) / 2 - canvasRect.top;
+            const cx2 = (rect2.left + rect2.right) / 2 - canvasRect.left;
+            const cy2 = (rect2.top + rect2.bottom) / 2 - canvasRect.top;
+
+            // 곡선 경로 (수평 중심의 부드러운 S자 꺾임)
+            const cx_control1 = cx1 + (cx2 - cx1) * 0.5;
+            const cx_control2 = cx1 + (cx2 - cx1) * 0.5;
+
+            const d = `M ${cx1} ${cy1} C ${cx_control1} ${cy1}, ${cx_control2} ${cy2}, ${cx2} ${cy2}`;
+            conn.path.setAttribute('d', d);
+
+            const len = conn.path.getTotalLength() || 1000;
+            conn.path.style.strokeDasharray = len;
+            conn.path.style.strokeDashoffset = len * (1 - conn.progress);
+        });
+    }
+
+    /* ─── STREAMING_CHUNK:Number Counter Utility ─── */
+    function animateValue(id, start, end, duration) {
+        const obj = document.getElementById(id);
+        if(!obj) return;
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            const current = Math.floor(progress * (end - start) + start);
+            obj.innerText = current.toLocaleString('ko-KR');
+            if (progress < 1) window.requestAnimationFrame(step);
+            else obj.innerText = end.toLocaleString('ko-KR');
+        };
+        window.requestAnimationFrame(step);
+    }
+
+    /* ─── STREAMING_CHUNK:Data Generation for Matrix ─── */
+    function initMatrixData() {
+        const matrixData = [
+            { t: '원자재 가격 지수', s: 'Raw Material Index', i: 'fa-coins' },
+            { t: '글로벌 환율 연동', s: 'Exchange Rate', i: 'fa-money-bill-transfer' },
+            { t: '부품 단종(EOL) 추적', s: 'End of Life DB', i: 'fa-skull-crossbones' },
+            { t: '물류 파업 알림', s: 'Logistics Strike', i: 'fa-ship' },
+            { t: '환경 규제 (RoHS)', s: 'Compliance API', i: 'fa-leaf' },
+            
+            { t: '협력사 리드타임', s: 'Supplier Lead Time', i: 'fa-calendar-days' },
+            { t: '기상청/날씨 API', s: 'Weather Conditions', i: 'fa-cloud-bolt' },
+            { t: '경쟁사 단가 모니터링', s: 'Competitor Pricing', i: 'fa-chart-line' },
+            { t: '반도체 수율 지표', s: 'Semiconductor Yield', i: 'fa-microchip' },
+            { t: '글로벌 금리 연동', s: 'Interest Rates', i: 'fa-percent' },
+            
+            { t: '탄소세 실시간 계산', s: 'Carbon Tax API', i: 'fa-smog' },
+            { t: '지정학적 리스크', s: 'Geopolitical Index', i: 'fa-earth-americas' },
+            { t: '사이버 보안 위협', s: 'Threat Level', i: 'fa-shield-halved' },
+            { t: '항만 혼잡도 지수', s: 'Port Congestion', i: 'fa-anchor' },
+            { t: '희토류 수출 통제', s: 'Rare Earth Control', i: 'fa-gem' },
+            
+            { t: '클라우드 서버 비용', s: 'Cloud Cost API', i: 'fa-server' },
+            { t: '에너지/유가 지표', s: 'Energy Prices', i: 'fa-gas-pump' },
+            { t: '노동/인건비 지수', s: 'Labor Costs', i: 'fa-users-gear' },
+            { t: '오픈소스 라이선스', s: 'OSS License Check', i: 'fa-code-branch' },
+            { t: 'API 호출 한도 추적', s: 'API Rate Limits', i: 'fa-gauge-high' }
+        ];
+
+        const container = document.getElementById('matrix-container');
+        matrixData.forEach(data => {
+            const el = document.createElement('div');
+            el.className = 'm-card';
+            el.innerHTML = `
+                <i class="fa-solid ${data.i} m-icon"></i>
+                <div class="m-title">${data.t}</div>
+                <div class="m-sub">${data.s}</div>
+            `;
+            container.appendChild(el);
+        });
+    }
+
+    /* ─── STREAMING_CHUNK:State Machine & Fast-Forward ─── */
+    function handleKeydown(e) {
+        if (e.key === 'ArrowRight') {
+            if (stepTl && stepTl.isActive()) {
+                stepTl.progress(1);
+            } else if (currentStep < maxSteps) {
+                currentStep++;
+                playStep(currentStep, false);
+            }
+        } else if (e.key === 'ArrowLeft') {
+            if (stepTl && stepTl.isActive()) {
+                stepTl.progress(1);
+            } else if (currentStep > 0) {
+                currentStep--;
+                resetBoard();
+                for(let i = 1; i <= currentStep; i++) playStep(i, true);
+            }
+        }
+    }
+
+    function resetBoard() {
+        if(stepTl) stepTl.kill();
+        activeConnections = [];
+        document.getElementById('dynamic-lines').innerHTML = '';
+        
+        gsap.set(['#card-req', '#card-bom', '#node-api', '#matrix-container', '.m-card'], { opacity: 0 });
+        gsap.set('#card-req', { left: -500 });
+        gsap.set('#card-bom', { right: -600 });
+        gsap.set('#node-api', { bottom: -200 });
+        gsap.set('#conflict-popup', { scale: 0.8, opacity: 0 });
+        
+        document.getElementById('val-ram').innerText = "300,000";
+        document.getElementById('val-total').innerText = "2,800,000";
+        
+        const tileRam = document.getElementById('tile-ram');
+        tileRam.classList.remove('flash-red');
+        
+        const bar = document.getElementById('budget-bar');
+        bar.style.width = "80%";
+        bar.style.background = "#0f62fe";
+
+        const badge = document.getElementById('badge-status');
+        badge.className = "verify-badge v-pass";
+        badge.innerHTML = `<i class="fa-solid fa-circle-check"></i> 검증 통과 (PASS)`;
+        
+        document.getElementById('matrix-container').style.pointerEvents = "none";
+    }
+
+    /* ─── STREAMING_CHUNK:Animation Sequences ─── */
+    function playStep(step, isInstant) {
+        if (stepTl) stepTl.kill();
+        stepTl = gsap.timeline();
+        
+        const dur = isInstant ? 0 : 0.4;
+        const fast = isInstant ? 0 : 0.25;
+
+        switch(step) {
+            case 1: 
+                // [Step 1] 그래픽 기반 요구사항과 BOM UI 등장
+                stepTl.to('#card-req', { left: 100, opacity: 1, duration: dur, ease: "power2.out" })
+                      .to('#card-bom', { right: 100, opacity: 1, duration: dur, ease: "power2.out" }, "<");
+                break;
+
+            case 2: 
+                // [Step 2] 외부 API 변동 발생 (RAM 폭등)
+                stepTl.to('#node-api', { bottom: 40, opacity: 1, duration: dur, ease: "back.out(1.2)" });
+                
+                const c1 = createConnection('node-api', 'tile-ram', '#da1e28', 'arrowRed', 4, "6 6");
+                
+                stepTl.to(c1, { progress: 1, duration: fast })
+                      .add(() => {
+                          if(!isInstant) {
+                              animateValue('val-ram', 300000, 850000, 400);
+                              animateValue('val-total', 2800000, 3350000, 400);
+                          } else {
+                              document.getElementById('val-ram').innerText = "850,000";
+                              document.getElementById('val-total').innerText = "3,350,000";
+                          }
+                          
+                          // 타일 전체 붉은색 강조(에러 상태)
+                          document.getElementById('tile-ram').classList.add('flash-red');
+                          
+                          // 프로그레스 바 한계선 돌파 (335만 / 350만 = 95.7%)
+                          const bar = document.getElementById('budget-bar');
+                          bar.style.width = "95.7%";
+                          bar.style.background = "#da1e28";
+                      })
+                      .to({}, { duration: isInstant?0:0.5 }) 
+                      .add(() => {
+                          const badge = document.getElementById('badge-status');
+                          badge.className = "verify-badge v-fail";
+                          badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> 검증 실패 (FAIL)`;
+                      });
+                break;
+
+            case 3: 
+                // [Step 3] SE Hub 팝업 등장 및 양방향 라인
+                stepTl.add(() => { activeConnections = []; document.getElementById('dynamic-lines').innerHTML = ''; });
+                
+                // 중앙 공간을 확보하기 위해 양쪽 카드를 바깥쪽으로 부드럽게 밀어냄
+                stepTl.to('#card-req', { left: 30, duration: dur, ease: "power2.out" })
+                      .to('#card-bom', { right: 30, duration: dur, ease: "power2.out" }, "<")
+                      .to('#conflict-popup', { scale: 1, opacity: 1, duration: dur, ease: "back.out(1.5)" }, "<");
+                
+                // 팝업이 요구사항과 BOM을 찌르며 경고를 주는 붉은색 연결선
+                const l2 = createConnection('conflict-popup', 'card-bom', '#da1e28', 'arrowRed', 4);
+                const l3 = createConnection('conflict-popup', 'card-req', '#da1e28', 'arrowRed', 4);
+                
+                stepTl.to([l2, l3], { progress: 1, duration: fast });
+                break;
+
+            case 4: 
+                // [Step 4] 4x6 매트릭스 도출
+                stepTl.to(['#card-req', '#card-bom', '#node-api', '#conflict-popup', '#dynamic-lines'], {
+                    opacity: 0, scale: 0.9, duration: dur
+                });
+                
+                stepTl.to('#matrix-container', { opacity: 1, duration: 0.1 })
+                      .to('.m-card', {
+                          opacity: 1, y: 0, duration: 0.3,
+                          stagger: isInstant ? 0 : 0.02,
+                          ease: "power2.out"
+                      });
+                break;
+        }
+    }
+</script>
+</body>
+</html>

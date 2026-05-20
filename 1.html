@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIERA — Growth Strategy (16:9)</title>
+    <!-- Font Awesome 6.5.1 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    <!-- GSAP for Smooth Animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+        /* ─── Base Variables and Reset ─── */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #e5e5e5;
+            font-family: 'IBM Plex Sans', 'Pretendard', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .slide-wrapper {
+            width: 1280px;
+            height: 720px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+            transform-origin: center center;
+            overflow: hidden;
+            padding: 50px 60px; 
+        }
+
+        /* ─── Header Styles ─── */
+        .header-area {
+            position: relative;
+            z-index: 100;
+        }
+        .kicker {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #0f62fe;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+        .main-title {
+            font-size: 42px;
+            font-weight: 200;
+            color: #161616;
+            line-height: 1.25;
+            letter-spacing: -0.015em;
+        }
+        .main-title strong { font-weight: 700; color: #0f62fe; }
+
+        /* ─── Track & Container ─── */
+        .scene-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            margin-top: 20px;
+        }
+
+        .step-panel {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .step-panel.active { pointer-events: auto; }
+
+        /* ─── Common Card Style ─── */
+        .carbon-card {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 16px 32px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ─── Step 1: 군 창업 프로그램 ─── */
+        .s1-container {
+            display: flex;
+            gap: 60px;
+            align-items: center;
+        }
+        .s1-box {
+            width: 320px;
+            padding: 40px;
+            text-align: center;
+            border-top: 6px solid #161616;
+        }
+        .s1-box i { font-size: 80px; color: #161616; margin-bottom: 24px; }
+        .s1-box.primary { border-color: #0f62fe; }
+        .s1-box.primary i { color: #0f62fe; }
+        .s1-title { font-size: 24px; font-weight: 700; margin-bottom: 12px; }
+        .s1-desc { font-size: 16px; color: #525252; line-height: 1.5; word-break: keep-all; }
+        .s1-arrow { font-size: 32px; color: #8d8d8d; }
+
+        /* ─── Step 2: 대학생 대회 PoC ─── */
+        .s2-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            gap: 40px;
+        }
+        .s2-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        .s2-sponsor-card {
+            background: #f4f4f4;
+            border: 1px solid #c6c6c6;
+            padding: 40px 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .s2-sponsor-card i { font-size: 56px; color: #161616; }
+        .s2-logo-text { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 700; color: #0f62fe; letter-spacing: -0.02em; }
+        .s2-sub { font-size: 15px; font-weight: 600; color: #525252; }
+
+        .s2-metrics {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .s2-metric-box {
+            background: #161616;
+            color: #ffffff;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.4;
+            flex: 1;
+        }
+        .s2-metric-box i { font-size: 32px; color: #0f62fe; flex-shrink: 0; }
+        .s2-metric-box.primary { background: #0f62fe; }
+        .s2-metric-box.primary i { color: #ffffff; }
+        
+        .s2-metric-box span.num { 
+            font-family: 'IBM Plex Mono', monospace; 
+            font-size: 28px; 
+            color: #0f62fe; 
+            font-weight: 700; 
+            margin-right: 4px;
+            letter-spacing: -0.02em;
+        }
+        /* 파란 배경일 때는 글씨를 흰색으로 반전 */
+        .s2-metric-box.primary span.num { color: #ffffff; }
+
+        /* ─── Step 3: 박람회 및 B2B 확장 ─── */
+        .s3-container {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            justify-content: center;
+        }
+        .s3-card {
+            width: 280px;
+            height: 320px;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 20px;
+            transition: transform 0.3s;
+            border-bottom: 6px solid #8a3ffc;
+        }
+        .s3-card h3 { font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 700; color: #161616; }
+        .s3-card p { font-size: 16px; color: #525252; font-weight: 600; }
+        .s3-card i { font-size: 50px; color: #8a3ffc; }
+
+        /* ─── Step 4: 선순환 생태계 (Flywheel) ─── */
+        .s4-container {
+            position: relative;
+            width: 600px;
+            height: 450px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .fw-circle {
+            position: absolute;
+            width: 360px;
+            height: 360px;
+            border: 4px dashed #c6c6c6;
+            border-radius: 50%;
+            z-index: 1;
+        }
+        .fw-node {
+            position: absolute;
+            width: 160px;
+            height: 160px;
+            background: #ffffff;
+            border: 2px solid #0f62fe;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 12px;
+            box-shadow: 0 12px 24px rgba(15, 98, 254, 0.15);
+            z-index: 10;
+        }
+        .fw-node i { font-size: 36px; color: #0f62fe; }
+        .fw-node span { font-size: 15px; font-weight: 700; color: #161616; line-height: 1.3;}
+        
+        /* Node positions */
+        #node-1 { top: -40px; left: 50%; transform: translateX(-50%); }
+        #node-2 { bottom: 40px; right: -40px; }
+        #node-3 { bottom: 40px; left: -40px; }
+
+        .fw-center {
+            position: absolute;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 28px;
+            font-weight: 700;
+            color: #161616;
+            z-index: 5;
+            text-align: center;
+        }
+        .fw-center span { font-size: 14px; color: #0f62fe; display: block; margin-top: 8px;}
+
+        /* ─── Progress Tracker ─── */
+        .progress-tracker {
+            position: absolute;
+            bottom: 40px;
+            left: 60px;
+            right: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 100;
+        }
+        .pt-line {
+            position: absolute;
+            top: 12px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+        .pt-progress {
+            position: absolute;
+            top: 12px;
+            left: 0;
+            width: 0%;
+            height: 2px;
+            background: #0f62fe;
+            z-index: 2;
+            transition: width 0.4s ease;
+        }
+        .pt-step {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 120px;
+        }
+        .pt-dot {
+            width: 26px;
+            height: 26px;
+            background: #ffffff;
+            border: 2px solid #c6c6c6;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+        .pt-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #8d8d8d;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .pt-step.active .pt-dot {
+            border-color: #0f62fe;
+            border-width: 6px;
+        }
+        .pt-step.active .pt-label {
+            color: #161616;
+            font-weight: 700;
+        }
+        .pt-step.done .pt-dot {
+            background: #0f62fe;
+            border-color: #0f62fe;
+        }
+    </style>
+</head>
+<body>
+
+<main class="slide-wrapper" id="slide-wrapper">
+    <header class="header-area">
+        <div class="kicker">BUSINESS GROWTH STRATEGY</div>
+        <h2 class="main-title" id="main-title">
+            <strong>01.</strong> 군 창업 프로그램을 통한 시드 로켓 발사
+        </h2>
+    </header>
+
+    <section class="scene-container">
+        
+        <!-- Step 1: 군 창업 프로그램 -->
+        <div class="step-panel" id="step-1">
+            <div class="s1-container">
+                <div class="carbon-card s1-box">
+                    <i class="fa-solid fa-medal"></i>
+                    <div class="s1-title">군 창업 프로그램</div>
+                    <div class="s1-desc">경진대회 수상 및 초기 창업 자금(시드) 확보</div>
+                </div>
+                <i class="fa-solid fa-arrow-right s1-arrow"></i>
+                <div class="carbon-card s1-box primary">
+                    <i class="fa-solid fa-rocket"></i>
+                    <div class="s1-title">프로토타입 (MVP)</div>
+                    <div class="s1-desc">확보한 자본을 바탕으로 핵심 시뮬레이션 엔진 개발</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: 대학생 대회 PoC -->
+        <div class="step-panel" id="step-2">
+            <div class="s2-container">
+                <div class="s2-grid">
+                    <div class="s2-sponsor-card">
+                        <i class="fa-solid fa-shuttle-space"></i>
+                        <div class="s2-logo-text">NURA</div>
+                        <div class="s2-sub">전국 대학생 로켓 발사 대회</div>
+                    </div>
+                    <div class="s2-sponsor-card">
+                        <i class="fa-solid fa-satellite"></i>
+                        <div class="s2-logo-text">CANSAT</div>
+                        <div class="s2-sub">캔위성 경연 대회</div>
+                    </div>
+                    <div class="s2-sponsor-card">
+                        <i class="fa-solid fa-car-side"></i>
+                        <div class="s2-logo-text">BAJA</div>
+                        <div class="s2-sub">자작 자동차 경진 대회</div>
+                    </div>
+                </div>
+                <div class="s2-metrics">
+                    <div class="s2-metric-box">
+                        <i class="fa-solid fa-database"></i>
+                        <div><span class="num">300+</span>엔지니어링 팀<br>사용 사례 확보</div>
+                    </div>
+                    <div class="s2-metric-box primary">
+                        <i class="fa-solid fa-bolt"></i>
+                        <div><span class="num">6~12</span>개월 내<br>초고속 PoC 달성</div>
+                    </div>
+                    <div class="s2-metric-box">
+                        <i class="fa-solid fa-handshake"></i>
+                        <div>타 후원사(스타트업)<br>B2B 네트워크 구축</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: 박람회/네트워크 확장 -->
+        <div class="step-panel" id="step-3">
+            <div class="s3-container">
+                <div class="s3-card">
+                    <i class="fa-solid fa-network-wired"></i>
+                    <h3>DIPS</h3>
+                    <p>국방 혁신 기술<br>파트너십 구축</p>
+                </div>
+                <div class="s3-card">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    <h3>TIPS</h3>
+                    <p>민간 투자 주도형<br>R&D 자금 연계</p>
+                </div>
+                <div class="s3-card">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                    <h3>NextRise</h3>
+                    <p>글로벌 스케일업 및<br>엔터프라이즈 고객 확보</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: 선순환 생태계 (Flywheel) -->
+        <div class="step-panel" id="step-4">
+            <div class="s4-container">
+                <div class="fw-circle" id="fw-circle"></div>
+                
+                <div class="fw-node" id="node-1">
+                    <i class="fa-solid fa-users"></i>
+                    <span>사용자 증가 및<br>데이터 누적</span>
+                </div>
+                <div class="fw-node" id="node-2">
+                    <i class="fa-solid fa-cubes"></i>
+                    <span>SE Hub 생태계<br>익스텐션 확장</span>
+                </div>
+                <div class="fw-node" id="node-3">
+                    <i class="fa-solid fa-crown"></i>
+                    <span>충성 고객 확보 및<br>시장 장악력(Lock-in)</span>
+                </div>
+
+                <div class="fw-center">
+                    VIRTUOUS<br>CYCLE
+                    <span>폭발적 선순환 달성</span>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- Progress Tracker -->
+    <div class="progress-tracker">
+        <div class="pt-line"></div>
+        <div class="pt-progress" id="pt-progress"></div>
+        
+        <div class="pt-step active" id="pt-1">
+            <div class="pt-dot"></div><div class="pt-label">시드 & 개발</div>
+        </div>
+        <div class="pt-step" id="pt-2">
+            <div class="pt-dot"></div><div class="pt-label">대회 후원 (PoC)</div>
+        </div>
+        <div class="pt-step" id="pt-3">
+            <div class="pt-dot"></div><div class="pt-label">고객 확장 (박람회)</div>
+        </div>
+        <div class="pt-step" id="pt-4">
+            <div class="pt-dot"></div><div class="pt-label">생태계 선순환</div>
+        </div>
+    </div>
+</main>
+
+<script>
+    let currentStep = 1;
+    const maxSteps = 4;
+    let animTl = null;
+
+    const stepTitles = [
+        "<strong>01.</strong> 군 창업 프로그램을 통한 시드 로켓 발사",
+        "<strong>02.</strong> 엔지니어링 대회 후원을 통한 PoC 및 네트워크",
+        "<strong>03.</strong> 정부·스타트업 박람회 참여로 B2B 고객 확장",
+        "<strong>04.</strong> SE Hub 기반 충성 고객 확보 및 시장 장악"
+    ];
+
+    function scaleSlide() {
+        const slide = document.getElementById('slide-wrapper');
+        const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720) * 0.95;
+        slide.style.transform = `scale(${scale})`;
+    }
+
+    window.onload = () => {
+        scaleSlide();
+        document.addEventListener('keydown', handleKeydown);
+        showStep(currentStep, true);
+    };
+    window.addEventListener('resize', scaleSlide);
+
+    function handleKeydown(e) {
+        if (animTl && animTl.isActive()) {
+            animTl.progress(1);
+            return;
+        }
+
+        if (e.key === 'ArrowRight' && currentStep < maxSteps) {
+            currentStep++;
+            showStep(currentStep);
+        } else if (e.key === 'ArrowLeft' && currentStep > 1) {
+            currentStep--;
+            showStep(currentStep);
+        }
+    }
+
+    function updateTracker(step) {
+        document.getElementById('pt-progress').style.width = `${((step - 1) / (maxSteps - 1)) * 100}%`;
+        
+        for (let i = 1; i <= maxSteps; i++) {
+            const el = document.getElementById(`pt-${i}`);
+            el.classList.remove('active', 'done');
+            if (i < step) el.classList.add('done');
+            else if (i === step) el.classList.add('active');
+        }
+    }
+
+    function showStep(step, isInitial = false) {
+        if (animTl) animTl.kill();
+        animTl = gsap.timeline();
+
+        // 텍스트 업데이트
+        document.getElementById('main-title').innerHTML = stepTitles[step - 1];
+        updateTracker(step);
+
+        // 이전 패널 아웃
+        document.querySelectorAll('.step-panel').forEach(panel => {
+            if (panel.id !== `step-${step}`) {
+                gsap.to(panel, { opacity: 0, x: -50, duration: isInitial ? 0 : 0.3, pointerEvents: 'none' });
+            }
+        });
+
+        // 현재 패널 인
+        const currentPanel = document.getElementById(`step-${step}`);
+        currentPanel.classList.add('active');
+        gsap.fromTo(currentPanel, 
+            { opacity: 0, x: 50 }, 
+            { opacity: 1, x: 0, duration: isInitial ? 0 : 0.5, ease: "power2.out", delay: isInitial ? 0 : 0.2 }
+        );
+
+        // 개별 스텝별 상세 애니메이션
+        const dur = isInitial ? 0 : 0.4;
+        const staggerDur = isInitial ? 0 : 0.15;
+
+        switch(step) {
+            case 1:
+                gsap.fromTo('.s1-box', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: dur, stagger: staggerDur, delay: 0.3, ease: "back.out(1.2)" });
+                gsap.fromTo('.s1-arrow', { opacity: 0, scale: 0 }, { opacity: 1, scale: 1, duration: dur, delay: 0.6 });
+                break;
+            case 2:
+                gsap.fromTo('.s2-sponsor-card', { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: dur, stagger: staggerDur, delay: 0.3, ease: "power2.out" });
+                gsap.fromTo('.s2-metric-box', { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: dur, stagger: staggerDur, delay: 0.6, ease: "back.out(1.5)" });
+                break;
+            case 3:
+                gsap.fromTo('.s3-card', { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: dur, stagger: staggerDur, delay: 0.3, ease: "back.out(1.2)" });
+                break;
+            case 4:
+                gsap.fromTo('.fw-circle', { rotation: -90, opacity: 0 }, { rotation: 0, opacity: 1, duration: 1, ease: "power2.out", delay: 0.2 });
+                gsap.fromTo('.fw-node', { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, stagger: 0.2, delay: 0.4, ease: "back.out(1.5)" });
+                gsap.fromTo('.fw-center', { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, delay: 1, ease: "power2.out" });
+                
+                // 무한 회전 애니메이션 적용
+                if (!isInitial) {
+                    animTl.to('.fw-circle', { rotation: 360, duration: 20, repeat: -1, ease: "linear" }, "+=0");
+                }
+                break;
+        }
+    }
+</script>
+</body>
+</html>

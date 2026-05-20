@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIERA — SE Hub Marketplace (16:9)</title>
+    <!-- Font Awesome 6.5.1 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+        /* ─── STREAMING_CHUNK:Base Reset and Presentation Constraints ─── */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #e5e5e5;
+            font-family: 'IBM Plex Sans', 'Pretendard', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .slide-wrapper {
+            width: 1280px;
+            height: 720px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+            transform-origin: center center;
+            overflow: hidden;
+            padding: 40px 60px;
+        }
+
+        /* ─── STREAMING_CHUNK:Header Styles ─── */
+        .header-area { position: relative; z-index: 10; margin-bottom: 20px; text-align: left; }
+        .kicker {
+            font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; letter-spacing: 0.18em;
+            text-transform: uppercase; color: #0f62fe; margin-bottom: 6px; display: inline-block;
+        }
+        .main-title { font-size: 40px; font-weight: 200; color: #161616; line-height: 1.25; letter-spacing: -0.015em; }
+        .main-title strong { font-weight: 700; color: #0f62fe; }
+
+        /* ─── STREAMING_CHUNK:Main Network Layout ─── */
+        .main-area {
+            flex: 1; position: relative; z-index: 10; width: 100%; height: 100%;
+        }
+
+        /* 중앙 거대 Hub (파란색 원형) */
+        .blue-hub {
+            position: absolute;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            width: 220px; height: 220px;
+            background: #0f62fe;
+            border-radius: 50%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #ffffff;
+            box-shadow: 0 16px 40px rgba(15, 98, 254, 0.3);
+            z-index: 150;
+        }
+        .hub-icon { font-size: 48px; margin-bottom: 12px; }
+        .hub-title { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+        .hub-sub { font-family: 'IBM Plex Mono', monospace; font-size: 12px; opacity: 0.8; }
+
+        /* ─── STREAMING_CHUNK:Node Styling (No Boxes) ─── */
+        .node {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            z-index: 40;
+        }
+        .node-icon-wrap {
+            width: 56px; height: 56px;
+            background: #f4f4f4; color: #161616;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .node-txt {
+            font-size: 15px; font-weight: 700; color: #161616; white-space: nowrap; text-align: center;
+            text-shadow: 0 2px 4px rgba(255,255,255,0.8); /* 배경선 겹칠 때 가독성 확보 */
+        }
+        .node-sub {
+            font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #8d8d8d; margin-top: -6px;
+        }
+
+        /* ─── 초기 메인 노드 (크게 설정) ─── */
+        #prov-1, #cons-1 { transform: translate(-50%, -50%) scale(1.4); transform-origin: center center; }
+        #prov-1 { left: 20%; top: 50%; }
+        #cons-1 { left: 80%; top: 50%; }
+
+        /* ─── 서브 노드 (초기 숨김) ─── */
+        .sub-node { opacity: 0; pointer-events: none; }
+        
+        /* ─── 익스텐션(앱) 물리 비행 객체 ─── */
+        .flying-ext {
+            position: absolute;
+            background: #ffffff;
+            border: 2px solid #0f62fe;
+            border-left: 6px solid #0f62fe;
+            padding: 8px 12px;
+            font-size: 13px; font-weight: 700; color: #161616;
+            display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 8px 16px rgba(15, 98, 254, 0.2);
+            z-index: 100;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        /* 혼돈 상태의 작은 파티클 */
+        .chaos-particle {
+            position: absolute;
+            background: #ffffff; border: 1px solid #c6c6c6; border-left: 3px solid;
+            padding: 4px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700;
+            color: #525252; z-index: 100; pointer-events: none; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        /* ─── 네트워크 배경 선 ─── */
+        .network-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none;
+        }
+
+        /* ─── STREAMING_CHUNK:Final Ecosystem Overlay ─── */
+        .ecosystem-overlay {
+            position: absolute; inset: 0; z-index: 200; pointer-events: none; opacity: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(4px);
+        }
+        .eco-badge {
+            font-family: 'IBM Plex Mono', monospace; background: #161616; color: #ffffff; padding: 10px 20px;
+            font-size: 16px; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 24px;
+        }
+        .eco-title { font-size: 42px; font-weight: 700; color: #0f62fe; margin-bottom: 40px; }
+        
+        .eco-stats-container { display: flex; gap: 80px; }
+        .eco-stat-box { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+        .es-label { font-size: 16px; font-weight: 700; color: #525252; }
+        .es-val { font-family: 'IBM Plex Mono', monospace; font-size: 64px; font-weight: 700; color: #161616; line-height: 1; letter-spacing: -0.05em;}
+    </style>
+</head>
+<body>
+
+<main class="slide-wrapper" id="slide-wrapper">
+
+    <header class="header-area">
+        <div class="kicker">APPENDIX</div>
+        <h2 class="main-title">
+            <strong>데이터와 API가 폭발적으로 거래되는 SE 생태계</strong>
+        </h2>
+    </header>
+
+    <section class="main-area" id="main-area">
+        <!-- SVG 네트워크 라인 레이어 -->
+        <svg class="network-canvas" id="network-lines"></svg>
+
+        <!-- 중앙 허브 -->
+        <div class="blue-hub" id="hub-center">
+            <i class="fa-solid fa-earth-asia hub-icon"></i>
+            <div class="hub-title">SE Hub</div>
+            <div class="hub-sub">Marketplace</div>
+        </div>
+
+        <!-- 초기 메인 공급자 -->
+        <div class="node" id="prov-1">
+            <div class="node-icon-wrap"><i class="fa-solid fa-industry"></i></div>
+            <div class="node-txt">원자재 공급 업체 1</div>
+            <div class="node-sub">Material API</div>
+        </div>
+
+        <!-- 서브 공급자들 -->
+        <div class="node sub-node prov-node" style="left: 10%; top: 25%;" id="prov-2">
+            <div class="node-icon-wrap"><i class="fa-solid fa-cloud-sun-rain"></i></div><div class="node-txt">기상 관측국</div>
+        </div>
+        <div class="node sub-node prov-node" style="left: 25%; top: 35%;" id="prov-3">
+            <div class="node-icon-wrap"><i class="fa-solid fa-ship"></i></div><div class="node-txt">해운 물류망</div>
+        </div>
+        <div class="node sub-node prov-node" style="left: 12%; top: 65%;" id="prov-4">
+            <div class="node-icon-wrap"><i class="fa-solid fa-shield-halved"></i></div><div class="node-txt">보안 데이터 센터</div>
+        </div>
+        <div class="node sub-node prov-node" style="left: 28%; top: 80%;" id="prov-5">
+            <div class="node-icon-wrap"><i class="fa-solid fa-money-bill-trend-up"></i></div><div class="node-txt">환율 정보 센터</div>
+        </div>
+        <div class="node sub-node prov-node" style="left: 8%; top: 85%;" id="prov-6">
+            <div class="node-icon-wrap"><i class="fa-solid fa-scale-balanced"></i></div><div class="node-txt">글로벌 규제 센터</div>
+        </div>
+
+        <!-- 초기 메인 수요자 -->
+        <div class="node" id="cons-1">
+            <div class="node-icon-wrap"><i class="fa-solid fa-plane-up"></i></div>
+            <div class="node-txt">스타트업 A</div>
+            <div class="node-sub">Drone Manufacturer</div>
+        </div>
+
+        <!-- 서브 수요자들 -->
+        <div class="node sub-node cons-node" style="left: 90%; top: 25%;" id="cons-2">
+            <div class="node-icon-wrap"><i class="fa-solid fa-robot"></i></div><div class="node-txt">로보틱스 팀</div>
+        </div>
+        <div class="node sub-node cons-node" style="left: 75%; top: 35%;" id="cons-3">
+            <div class="node-icon-wrap"><i class="fa-solid fa-satellite"></i></div><div class="node-txt">우주항공 엔터프라이즈</div>
+        </div>
+        <div class="node sub-node cons-node" style="left: 88%; top: 65%;" id="cons-4">
+            <div class="node-icon-wrap"><i class="fa-solid fa-car"></i></div><div class="node-txt">자율주행 연구소</div>
+        </div>
+        <div class="node sub-node cons-node" style="left: 72%; top: 80%;" id="cons-5">
+            <div class="node-icon-wrap"><i class="fa-solid fa-satellite-dish"></i></div><div class="node-txt">방위산업 레이더 팀</div>
+        </div>
+        <div class="node sub-node cons-node" style="left: 92%; top: 85%;" id="cons-6">
+            <div class="node-icon-wrap"><i class="fa-solid fa-battery-full"></i></div><div class="node-txt">배터리 제조사</div>
+        </div>
+
+        <!-- 결론 오버레이 -->
+        <div class="ecosystem-overlay" id="eco-overlay">
+            <div class="eco-badge">WIN-WIN ECOSYSTEM</div>
+            <div class="eco-title">데이터가 가치를 창출하는 선순환 구조</div>
+        </div>
+
+    </section>
+</main>
+
+<script>
+    /* ─── STREAMING_CHUNK:Init and Resizing ─── */
+    let currentStep = 0;
+    const maxSteps = 4;
+    let stepTl = null;
+    let chaosActive = false;
+    let chaosTimer = null;
+    let activeParticles = [];
+
+    function scaleSlide() {
+        const slide = document.getElementById('slide-wrapper');
+        const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720) * 0.95; 
+        slide.style.transform = `scale(${scale})`;
+    }
+    window.onload = () => { scaleSlide(); initNetworkLines(); document.addEventListener('keydown', handleKeydown); };
+    window.addEventListener('resize', scaleSlide);
+
+    /* ─── STREAMING_CHUNK:Dynamic Flying Logic ─── */
+    // 큰 익스텐션 박스 비행 (Step 1 & 2)
+    function flyLargeBox(startId, endId, text, isInstant) {
+        const wrapper = document.getElementById('main-area');
+        const startEl = document.getElementById(startId);
+        const endEl = document.getElementById(endId);
+        
+        if (isInstant) return;
+
+        const clone = document.createElement('div');
+        clone.className = 'flying-ext';
+        clone.innerHTML = `<i class="fa-solid fa-box-open"></i> ${text}`;
+        wrapper.appendChild(clone);
+
+        const sRect = startEl.getBoundingClientRect();
+        const eRect = endEl.getBoundingClientRect();
+        const wRect = wrapper.getBoundingClientRect();
+        const scale = wRect.width / wrapper.offsetWidth;
+
+        gsap.set(clone, {
+            left: (sRect.left + sRect.width/2 - wRect.left) / scale,
+            top: (sRect.top + sRect.height/2 - wRect.top) / scale,
+            xPercent: -50, yPercent: -50
+        });
+
+        gsap.to(clone, {
+            left: (eRect.left + eRect.width/2 - wRect.left) / scale,
+            top: (eRect.top + eRect.height/2 - wRect.top) / scale,
+            duration: 0.7,
+            ease: "power2.inOut",
+            onComplete: () => clone.remove()
+        });
+    }
+
+    /* ─── STREAMING_CHUNK:Chaos Ecosystem Logic (Step 3) ─── */
+    function startChaosLoop() {
+        chaosActive = true;
+        const provs = Array.from(document.querySelectorAll('.prov-node, #prov-1'));
+        const conss = Array.from(document.querySelectorAll('.cons-node, #cons-1'));
+        const hub = document.getElementById('hub-center');
+        const wrapper = document.getElementById('main-area');
+
+        function spawnParticle() {
+            if (!chaosActive) return;
+            
+            // 2~3개의 파티클 동시 생성하여 어지러움 극대화
+            for (let i = 0; i < 3; i++) {
+                const isUpload = Math.random() > 0.5;
+                const startEl = isUpload ? provs[Math.floor(Math.random() * provs.length)] : hub;
+                const endEl = isUpload ? hub : conss[Math.floor(Math.random() * conss.length)];
+                
+                const particle = document.createElement('div');
+                particle.className = 'chaos-particle';
+                
+                const types = ['Data', 'API', 'Req', 'Model', 'Ext'];
+                const colors = ['#0f62fe', '#8a3ffc', '#009d9a', '#198038'];
+                const pColor = colors[Math.floor(Math.random()*colors.length)];
+                
+                particle.style.borderLeftColor = pColor;
+                particle.innerHTML = `<i class="fa-solid fa-circle" style="font-size:6px; color:${pColor};"></i> ${types[Math.floor(Math.random()*types.length)]}`;
+                wrapper.appendChild(particle);
+                activeParticles.push(particle);
+
+                const sRect = startEl.getBoundingClientRect();
+                const eRect = endEl.getBoundingClientRect();
+                const wRect = wrapper.getBoundingClientRect();
+                const scale = wRect.width / wrapper.offsetWidth;
+
+                gsap.set(particle, {
+                    left: (sRect.left + sRect.width/2 - wRect.left) / scale,
+                    top: (sRect.top + sRect.height/2 - wRect.top) / scale,
+                    xPercent: -50, yPercent: -50
+                });
+
+                gsap.to(particle, {
+                    left: (eRect.left + eRect.width/2 - wRect.left) / scale,
+                    top: (eRect.top + eRect.height/2 - wRect.top) / scale,
+                    duration: 0.6 + Math.random() * 0.4,
+                    ease: "power1.inOut",
+                    onComplete: () => {
+                        particle.remove();
+                        activeParticles = activeParticles.filter(p => p !== particle);
+                    }
+                });
+            }
+            chaosTimer = setTimeout(spawnParticle, 150);
+        }
+        spawnParticle();
+    }
+
+    function initNetworkLines() {
+        const svg = document.getElementById('network-lines');
+        svg.innerHTML = '';
+        const nodes = document.querySelectorAll('.node');
+        const hub = document.getElementById('hub-center');
+        const wrapper = document.getElementById('main-area');
+        
+        nodes.forEach(node => {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('stroke', '#0f62fe');
+            line.setAttribute('stroke-width', '2');
+            line.setAttribute('stroke-dasharray', '6 4');
+            svg.appendChild(line);
+            
+            // GSAP ticker를 이용해 반응형 좌표 업데이트 및 투명도 동기화
+            gsap.ticker.add(() => {
+                const wRect = wrapper.getBoundingClientRect();
+                const scale = wRect.width / wrapper.offsetWidth;
+                
+                const nRect = node.getBoundingClientRect();
+                const hRect = hub.getBoundingClientRect();
+                
+                line.setAttribute('x1', (nRect.left + nRect.width/2 - wRect.left)/scale);
+                line.setAttribute('y1', (nRect.top + nRect.height/2 - wRect.top)/scale);
+                line.setAttribute('x2', (hRect.left + hRect.width/2 - wRect.left)/scale);
+                line.setAttribute('y2', (hRect.top + hRect.height/2 - wRect.top)/scale);
+
+                const opacity = parseFloat(window.getComputedStyle(node).opacity);
+                line.setAttribute('opacity', isNaN(opacity) ? 0 : opacity * 0.4);
+            });
+        });
+    }
+
+    /* ─── STREAMING_CHUNK:State Machine & Fast Forward ─── */
+    function handleKeydown(e) {
+        if (e.key === 'ArrowRight') {
+            if (stepTl && stepTl.isActive()) stepTl.progress(1);
+            else if (currentStep < maxSteps) { currentStep++; playStep(currentStep); }
+        } else if (e.key === 'ArrowLeft') {
+            if (stepTl && stepTl.isActive()) stepTl.progress(1);
+            else if (currentStep > 0) {
+                currentStep--;
+                resetBoard();
+                for(let i=1; i<=currentStep; i++) playStep(i, true);
+            }
+        }
+    }
+
+    function resetBoard() {
+        if(stepTl) stepTl.kill();
+        
+        // 카오스 모드 종료 및 파티클 청소
+        chaosActive = false;
+        clearTimeout(chaosTimer);
+        activeParticles.forEach(p => p.remove());
+        activeParticles = [];
+        document.querySelectorAll('.flying-ext').forEach(p => p.remove());
+
+        // 초기 상태 복구
+        gsap.set('#prov-1', { left: '20%', top: '50%', scale: 1.4 });
+        gsap.set('#cons-1', { left: '80%', top: '50%', scale: 1.4 });
+        gsap.set('#hub-center', { width: 220, height: 220 });
+        gsap.set('.sub-node, #eco-overlay', { opacity: 0 });
+    }
+
+    /* ─── STREAMING_CHUNK:Scenario Timelines ─── */
+    function playStep(step, isInstant = false) {
+        if (stepTl) stepTl.kill();
+        stepTl = gsap.timeline();
+        const dur = isInstant ? 0 : 0.6;
+
+        switch(step) {
+            case 1: 
+                // [Step 1] 공급자 -> 허브 (업로드)
+                flyLargeBox('prov-1', 'hub-center', '원자재 변동 추적 API', isInstant);
+                if(!isInstant) stepTl.to({}, {duration: 0.7}); 
+                break;
+
+            case 2: 
+                // [Step 2] 허브 -> 수요자 (다운로드)
+                flyLargeBox('hub-center', 'cons-1', '원자재 변동 추적 API', isInstant);
+                if(!isInstant) stepTl.to({}, {duration: 0.7}); 
+                break;
+
+            case 3: 
+                // [Step 3] 폭발적 생태계 확장 (Chaos)
+                // 1. 기존 메인 노드들 상단으로 이동 및 축소
+                stepTl.to(['#prov-1', '#cons-1'], { top: '15%', scale: 1, duration: dur, ease: "power2.inOut" })
+                      .to('#hub-center', { width: 150, height: 150, duration: dur, ease: "power2.inOut" }, "<")
+                      // 2. 수많은 서브 노드 등장
+                      .to('.sub-node', { opacity: 1, duration: dur, ease: "power1.inOut" }, "-=0.2")
+                      .add(() => {
+                          if (!isInstant) {
+                              startChaosLoop();
+                          }
+                      });
+                break;
+
+            case 4: 
+                // [Step 4] 생태계 결론 도출 (Overlay) - 방향키를 한 번 더 누르면 실행됨
+                stepTl.add(() => { chaosActive = false; }) // 어지러운 파티클 생성 중단하여 시선 집중
+                      .to('#eco-overlay', { opacity: 1, duration: dur });
+                break;
+        }
+    }
+
+    function animateNumber(id, end, prefix = "", suffix = "") {
+        const obj = document.getElementById(id);
+        const duration = 800; let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerText = prefix + Math.floor(progress * end).toLocaleString() + suffix;
+            if (progress < 1) window.requestAnimationFrame(step);
+            else obj.innerText = prefix + end.toLocaleString() + suffix;
+        };
+        window.requestAnimationFrame(step);
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIERA 발표 슬라이드쇼</title>
+<style>
+:root {
+  --bg: #000;
+  --start-bg-from: #0a1628;
+  --start-bg-to: #1a3a6e;
+  --accent: #0f62fe;
+  --accent-hover: #0353e9;
+  --text: #fff;
+  --text-muted: #a0b8d8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden; background: var(--bg);
+  font-family: 'IBM Plex Sans KR', -apple-system, BlinkMacSystemFont,
+               'Segoe UI', 'Noto Sans KR', sans-serif;
+}
+
+/* ===== Start screen ===== */
+#start-screen {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(135deg, var(--start-bg-from) 0%, var(--start-bg-to) 100%);
+  color: var(--text); z-index: 1000;
+}
+#start-screen .brand { font-size: 64px; font-weight: 700; letter-spacing: 6px; }
+#start-screen .tagline {
+  color: var(--text-muted); font-size: 14px;
+  margin-bottom: 32px; letter-spacing: 0.5px;
+}
+#start-btn {
+  padding: 16px 56px; background: var(--accent); color: var(--text);
+  border: none; font-size: 15px; cursor: pointer;
+  transition: background 0.15s; font-weight: 500; letter-spacing: 1px;
+  font-family: inherit;
+}
+#start-btn:hover:not(:disabled) { background: var(--accent-hover); }
+#start-btn:disabled { background: #2a3a5a; cursor: wait; }
+#start-screen .status {
+  color: var(--text-muted); font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  margin-top: 16px; height: 18px; letter-spacing: 0.3px;
+}
+#start-screen .hint {
+  margin-top: 36px; font-size: 11px; color: #5c79a0;
+  letter-spacing: 0.8px; font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ===== Viewer ===== */
+#viewer { position: fixed; inset: 0; display: none; background: #000; }
+#viewer.active { display: block; }
+
+#stage-wrap {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* 16:9 stage that fits the viewport (letterboxed) */
+#stage {
+  position: relative;
+  width: min(100vw, 177.78vh);
+  height: min(56.25vw, 100vh);
+  background: #fff;
+  overflow: hidden;
+}
+
+.slide { position: absolute; inset: 0; display: none; }
+.slide.active { display: block; }
+.slide canvas, .slide iframe {
+  width: 100%; height: 100%; display: block; border: 0;
+}
+
+/* Side click zones — work even when iframe captures focus */
+.nav-zone {
+  position: absolute; top: 0; bottom: 0; width: 8%;
+  z-index: 50; cursor: pointer;
+  display: flex; align-items: center;
+  opacity: 0; transition: opacity 0.2s;
+}
+.nav-zone:hover { opacity: 1; }
+.nav-zone.prev {
+  left: 0; justify-content: flex-start; padding-left: 12px;
+  background: linear-gradient(to right, rgba(0,0,0,0.45), transparent);
+}
+.nav-zone.next {
+  right: 0; justify-content: flex-end; padding-right: 12px;
+  background: linear-gradient(to left, rgba(0,0,0,0.45), transparent);
+}
+.nav-zone svg { width: 40px; height: 40px; fill: rgba(255,255,255,0.9); }
+
+/* HUD */
+#hud {
+  position: fixed; bottom: 18px; right: 20px;
+  color: rgba(255,255,255,0.7);
+  font-size: 13px; font-family: 'IBM Plex Mono', monospace;
+  background: rgba(0,0,0,0.55); padding: 6px 12px;
+  z-index: 100; user-select: none; letter-spacing: 1px;
+}
+#progress {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 2px;
+  background: rgba(255,255,255,0.08); z-index: 100;
+}
+#progress > div {
+  height: 100%; background: var(--accent); width: 0;
+  transition: width 0.25s ease-out;
+}
+#exit-btn {
+  position: fixed; top: 14px; right: 18px; z-index: 100;
+  background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.7);
+  border: none; padding: 6px 12px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  cursor: pointer; letter-spacing: 1px;
+}
+#exit-btn:hover { color: #fff; background: rgba(0,0,0,0.75); }
+</style>
+</head>
+<body>
+
+<div id="start-screen">
+  <div class="brand">SIERA</div>
+  <div class="tagline">스타트업을 위한 시스템 엔지니어링 자동화 플랫폼</div>
+  <button id="start-btn" disabled>로딩 중...</button>
+  <div class="status" id="status">&nbsp;</div>
+  <div class="hint">← → ↑ ↓ SPACE  ·  ESC TO EXIT</div>
+</div>
+
+<div id="viewer">
+  <div id="stage-wrap"><div id="stage"></div></div>
+  <div class="nav-zone prev" id="zone-prev" title="이전 (←)">
+    <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg>
+  </div>
+  <div class="nav-zone next" id="zone-next" title="다음 (→)">
+    <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+  </div>
+  <div id="hud"><span id="hud-current">1</span> / <span id="hud-total">-</span></div>
+  <div id="progress"><div id="progress-bar"></div></div>
+  <button id="exit-btn">EXIT (ESC)</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+<script>
+// ============== CONFIG ==============
+const CONFIG = {
+  // PDF 파일명 (slideshow.html과 같은 폴더). 실제 파일명으로 바꿔도 됨.
+  pdfFile: '찐_최종_발표_자료.pdf',
+
+  // HTML 슬라이드 파일명 패턴: 1.html, 2.html, ... 순서대로 자동 탐색
+  htmlPattern: (n) => `${n}.html`,
+  // 첫 번째로 못 찾은 번호에서 탐색 중단 (최대 maxProbe까지)
+  maxProbe: 99,
+
+  // PDF 렌더링 해상도 배율 (2.0 권장)
+  pdfRenderScale: 2.0,
+};
+// ====================================
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+
+const stage = document.getElementById('stage');
+const startScreen = document.getElementById('start-screen');
+const viewer = document.getElementById('viewer');
+const startBtn = document.getElementById('start-btn');
+const statusEl = document.getElementById('status');
+const hudCurrent = document.getElementById('hud-current');
+const hudTotal = document.getElementById('hud-total');
+const progressBar = document.getElementById('progress-bar');
+
+let pdfDoc = null;
+let totalSlides = 0;
+let currentIdx = 0;
+const slides = [];
+
+// HEAD 요청으로 파일 존재 확인 (HTTP 서버 환경에서 동작)
+async function fileExists(url) {
+  try {
+    const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+    return res.ok;
+  } catch (e) {
+    // fetch 자체가 실패한 경우 (file:// 등) — GET으로 재시도
+    try {
+      const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+      return res.ok;
+    } catch (e2) {
+      return false;
+    }
+  }
+}
+
+async function probeHtmlFiles() {
+  const found = [];
+  for (let n = 1; n <= CONFIG.maxProbe; n++) {
+    const name = CONFIG.htmlPattern(n);
+    statusEl.textContent = `HTML 탐색 중... ${name}`;
+    const ok = await fileExists(name);
+    if (!ok) break;
+    found.push(name);
+  }
+  return found;
+}
+
+async function init() {
+  try {
+    // 1) PDF 로드
+    statusEl.textContent = 'PDF 다운로드 중...';
+    pdfDoc = await pdfjsLib.getDocument(encodeURI(CONFIG.pdfFile)).promise;
+    const pdfPages = pdfDoc.numPages;
+
+    for (let i = 0; i < pdfPages; i++) {
+      const div = document.createElement('div');
+      div.className = 'slide';
+      stage.appendChild(div);
+      slides.push({ type: 'pdf', pageNum: i + 1, element: div, rendered: false });
+    }
+
+    // 2) HTML 파일 동적 탐색
+    const htmlFiles = await probeHtmlFiles();
+    for (const file of htmlFiles) {
+      const div = document.createElement('div');
+      div.className = 'slide';
+      stage.appendChild(div);
+      slides.push({ type: 'html', file, element: div, loaded: false });
+    }
+
+    totalSlides = slides.length;
+    hudTotal.textContent = totalSlides;
+    statusEl.textContent =
+      `PDF ${pdfPages}p  +  HTML ${htmlFiles.length}p  =  ${totalSlides} slides`;
+    startBtn.disabled = false;
+    startBtn.textContent = '슬라이드쇼 시작  ▶';
+  } catch (err) {
+    statusEl.textContent = `로드 실패: ${err.message}`;
+    startBtn.textContent = '재시도';
+    startBtn.disabled = false;
+    startBtn.onclick = () => location.reload();
+    console.error(err);
+    console.warn(
+      'file:// 로 직접 열면 브라우저가 PDF/HTML 로드를 막을 수 있습니다.\n' +
+      '폴더에서 `python3 -m http.server` 실행 후 http://localhost:8000/slideshow.html 으로 여세요.'
+    );
+  }
+}
+
+function renderPdfPage(slide) {
+  if (slide.rendered) return Promise.resolve();
+  if (slide._rendering) return slide._rendering;
+  slide._rendering = (async () => {
+    const page = await pdfDoc.getPage(slide.pageNum);
+    const viewport = page.getViewport({ scale: CONFIG.pdfRenderScale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    slide.element.appendChild(canvas);
+    slide.rendered = true;
+  })();
+  return slide._rendering;
+}
+
+function loadHtmlSlide(slide) {
+  // 항상 새로 로드 → 애니메이션이 매번 처음부터 재생
+  slide.element.innerHTML = '';
+  const iframe = document.createElement('iframe');
+  iframe.src = encodeURI(slide.file);
+  iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media');
+  iframe.setAttribute('allowfullscreen', '');
+  iframe.addEventListener('load', () => {
+    // 같은 origin이면 iframe 내부 키 입력도 부모 네비게이션으로 전달
+    try {
+      const doc = iframe.contentDocument;
+      if (doc) doc.addEventListener('keydown', handleKey);
+    } catch (e) { /* cross-origin: 사이드 클릭존으로 대체 */ }
+  });
+  slide.element.appendChild(iframe);
+  slide.loaded = true;
+}
+
+function unloadHtmlSlide(slide) {
+  // iframe 제거 → JS/오디오/애니메이션 완전 중지
+  slide.element.innerHTML = '';
+  slide.loaded = false;
+}
+
+async function showSlide(idx) {
+  if (idx < 0 || idx >= totalSlides) return;
+
+  slides.forEach((s, i) => {
+    if (i !== idx) {
+      s.element.classList.remove('active');
+      if (s.type === 'html' && s.loaded) unloadHtmlSlide(s);
+    }
+  });
+
+  const slide = slides[idx];
+  if (slide.type === 'pdf') {
+    await renderPdfPage(slide);
+  } else {
+    loadHtmlSlide(slide);
+  }
+  slide.element.classList.add('active');
+
+  // 인접 PDF 페이지 프리렌더 (HTML은 매번 새로 로드해야 하므로 제외)
+  for (const ni of [idx - 1, idx + 1]) {
+    if (ni >= 0 && ni < totalSlides && slides[ni].type === 'pdf') {
+      renderPdfPage(slides[ni]).catch(() => {});
+    }
+  }
+
+  currentIdx = idx;
+  hudCurrent.textContent = idx + 1;
+  progressBar.style.width = ((idx + 1) / totalSlides * 100) + '%';
+  window.focus();
+}
+
+function next() { showSlide(currentIdx + 1); }
+function prev() { showSlide(currentIdx - 1); }
+
+function handleKey(e) {
+  if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) {
+    e.preventDefault(); next();
+  } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+    e.preventDefault(); prev();
+  } else if (e.key === 'Home') {
+    e.preventDefault(); showSlide(0);
+  } else if (e.key === 'End') {
+    e.preventDefault(); showSlide(totalSlides - 1);
+  }
+}
+
+document.addEventListener('keydown', handleKey);
+document.getElementById('zone-prev').addEventListener('click', prev);
+document.getElementById('zone-next').addEventListener('click', next);
+
+document.getElementById('exit-btn').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  viewer.classList.remove('active');
+  startScreen.style.display = 'flex';
+  slides.forEach(s => {
+    if (s.type === 'html' && s.loaded) unloadHtmlSlide(s);
+  });
+});
+
+startBtn.addEventListener('click', async () => {
+  startScreen.style.display = 'none';
+  viewer.classList.add('active');
+  try {
+    await document.documentElement.requestFullscreen();
+  } catch (err) {
+    console.warn('Fullscreen 거부됨:', err);
+  }
+  showSlide(0);
+});
+
+// 페이지 진입 즉시 PDF + HTML 탐색 시작
+init();
+</script>
+
+</body>
+</html>

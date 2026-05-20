@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIERA — ER Engine Architecture (16:9)</title>
+    <!-- Font Awesome 6.5.1 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    <!-- GSAP for Smooth Animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+        /* ─── Base Reset and Presentation Wrapper ─── */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #e5e5e5;
+            font-family: 'IBM Plex Sans', 'Pretendard', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .slide-wrapper {
+            width: 1280px;
+            height: 720px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+            transform-origin: center center;
+            overflow: hidden;
+        }
+
+        /* ─── Header Styles ─── */
+        .header-area {
+            position: absolute;
+            top: 50px;
+            left: 60px;
+            z-index: 100;
+        }
+        .kicker {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #0f62fe;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+        .main-title {
+            font-size: 46px;
+            font-weight: 200;
+            color: #161616;
+            line-height: 1.25;
+            letter-spacing: -0.015em;
+        }
+        .main-title strong { font-weight: 700; color: #0f62fe; }
+
+        /* ─── Canvas for Absolute Elements & SVG Lines ─── */
+        .scene-canvas {
+            position: absolute;
+            top: 220px;
+            left: 0;
+            width: 100%;
+            height: 500px;
+            z-index: 10;
+        }
+        #line-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 15;
+        }
+        
+        /* 공통 카드 스타일 (Carbon Design) */
+        .card-box {
+            position: absolute;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 16px 32px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 20;
+            border-radius: 0;
+        }
+        .cb-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #f4f4f4;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #161616;
+            letter-spacing: -0.01em;
+        }
+        .cb-body { padding: 24px; }
+
+        /* ─── Step 1 Elements (NL & LLM Upscaled) ─── */
+        #card-nl {
+            width: 440px; 
+            border-left: 6px solid #161616;
+            left: 1400px; /* 초기 화면 밖 */
+        }
+        #card-nl .cb-header { background: #161616; color: #ffffff; border-bottom: none; }
+        .req-text {
+            font-size: 20px; 
+            line-height: 1.6;
+            color: #161616;
+            word-break: keep-all;
+        }
+        .req-text b { font-weight: 700; color: #0f62fe; background: #e3edff; padding: 2px 6px; }
+
+        #card-llm {
+            width: 380px; 
+            border-left: 6px solid #8a3ffc; 
+            left: 1400px;
+            text-align: center;
+        }
+        .llm-icon { font-size: 64px; color: #8a3ffc; margin-bottom: 20px; }
+        .llm-title { font-size: 24px; font-weight: 700; color: #161616; }
+        .llm-sub { font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #525252; margin-top: 10px;}
+
+        /* ─── Step 2 Elements (Variable Tree Upscaled) ─── */
+        #card-tree {
+            width: 340px; 
+            left: 1400px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        .var-node {
+            background: #ffffff;
+            border: 1px solid #8a3ffc;
+            border-left: 6px solid #8a3ffc;
+            padding: 16px 20px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 18px; 
+            font-weight: 700;
+            color: #8a3ffc;
+            box-shadow: 0 8px 16px rgba(138, 63, 252, 0.15);
+            position: relative;
+            opacity: 0; /* 초기 숨김 상태 */
+        }
+        .var-node i { margin-right: 12px; }
+
+        /* ─── Step 3 Elements (Code Box Upscaled) ─── */
+        #card-code {
+            width: 620px; 
+            background: #161616;
+            border-left: 6px solid #525252;
+            color: #f4f4f4;
+            left: 1400px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 16px; 
+            line-height: 1.9;
+        }
+        #card-code .cb-header { background: #393939; color: #ffffff; border-bottom: 1px solid #525252; font-size: 16px;}
+        
+        .code-line { opacity: 0; } /* 초기 숨김 상태 */
+        .c-keyword { color: #ff7eb6; } 
+        .c-func { color: #08bdba; } 
+        .c-string { color: #f1c21b; } 
+        .c-comment { color: #8d8d8d; font-size: 13px; }
+
+        .hl-span {
+            position: relative;
+            display: inline-block;
+            transition: all 0.3s ease;
+            padding: 0 4px;
+            border-radius: 2px;
+        }
+        .hl-span.active-var { background: rgba(138, 63, 252, 0.4); outline: 2px solid #8a3ffc; }
+        .hl-span.active-api { background: rgba(15, 98, 254, 0.4); outline: 2px solid #0f62fe; }
+
+        /* ─── Step 4 Elements (Engine Graph with Many Nodes) ─── */
+        #card-engine {
+            width: 480px;
+            height: 480px;
+            left: 1400px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            position: absolute;
+        }
+        .engine-hub {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 180px; 
+            height: 180px;
+            background: #0f62fe;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            box-shadow: 0 0 40px rgba(15, 98, 254, 0.4);
+            z-index: 5;
+            text-align: center;
+        }
+        .eh-title { font-size: 22px; font-weight: 700; line-height: 1.2; margin-bottom: 6px; }
+        .eh-sub { font-family: 'IBM Plex Mono', monospace; font-size: 12px; opacity: 0.8; }
+        
+        /* 다수 API 노드 원형 배치 */
+        .api-node {
+            position: absolute;
+            background: #ffffff;
+            border: 2px solid #c6c6c6;
+            color: #8d8d8d;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 10px 14px;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            white-space: nowrap;
+            opacity: 0.2; /* 기본적으로 흐리게 노출 */
+        }
+        .api-node.target-node {
+            border-color: #0f62fe;
+            color: #0f62fe;
+            font-weight: 700;
+            box-shadow: 0 8px 20px rgba(15, 98, 254, 0.2);
+            opacity: 1 !important; /* 연결 시 선명하게 */
+        }
+
+        /* 6개의 API 노드 육각 배치 */
+        #api-windforce { top: -10px; left: 50%; transform: translateX(-50%); opacity: 0;} /* 타겟은 처음엔 완전 투명 */
+        #api-drag { top: 15%; right: -30px; transform: translateY(-50%); }
+        #api-thrust { bottom: 15%; right: -30px; transform: translateY(-50%); }
+        #api-verify { bottom: -10px; left: 50%; transform: translateX(-50%); opacity: 0;} /* 타겟은 처음엔 완전 투명 */
+        #api-battery { bottom: 15%; left: -30px; transform: translateY(-50%); }
+        #api-path { top: 15%; left: -30px; transform: translateY(-50%); }
+
+        .gear-bg {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 320px;
+            color: rgba(15, 98, 254, 0.08);
+            z-index: 1;
+        }
+
+        /* ─── Step 5 Elements (Result Box Upscaled) ─── */
+        #card-result {
+            width: 420px; 
+            border-left: 6px solid #198038; 
+            left: 1400px;
+        }
+        #card-result .cb-header { font-size: 18px; }
+        .res-data {
+            background: #f4f4f4;
+            border: 1px solid #e0e0e0;
+            padding: 16px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 15px; 
+            line-height: 1.7;
+            color: #161616;
+            margin-bottom: 20px;
+        }
+        .trust-badge {
+            background: #198038;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 12px 24px rgba(25, 128, 56, 0.2);
+            border-bottom: 4px solid #0e6027;
+        }
+        .tb-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        .tb-sub { font-size: 13px; font-weight: 500; opacity: 0.9; letter-spacing: -0.02em; word-break: keep-all; line-height: 1.4;}
+
+    </style>
+</head>
+<body>
+
+<main class="slide-wrapper" id="slide-wrapper">
+    <!-- 헤더 -->
+    <header class="header-area">
+        <div class="kicker">ZERO-HALLUCINATION ARCHITECTURE</div>
+        <h2 class="main-title">
+            AI는 언어만 해석할 뿐,<br/>
+            <strong>물리적 검증은 100% 자체 엔진이 수행합니다</strong>
+        </h2>
+    </header>
+
+    <section class="scene-canvas">
+        <svg id="line-layer">
+            <defs>
+                <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <polygon points="0 0, 8 4, 0 8" fill="#8a3ffc" />
+                </marker>
+                <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <polygon points="0 0, 8 4, 0 8" fill="#0f62fe" />
+                </marker>
+                <marker id="arrowGray" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <polygon points="0 0, 8 4, 0 8" fill="#8d8d8d" />
+                </marker>
+                <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                    <polygon points="0 0, 8 4, 0 8" fill="#198038" />
+                </marker>
+            </defs>
+            <g id="dynamic-lines"></g>
+        </svg>
+
+        <!-- Step 1: Input -->
+        <article class="card-box" id="card-nl">
+            <div class="cb-header"><i class="fa-solid fa-comment-dots"></i> 자연어 요구사항 입력</div>
+            <div class="cb-body">
+                <div class="req-text">
+                    "해당 정찰 드론은 <b>시속 50km 맞바람</b> 환경에서도 <b>최소 20분 이상 호버링</b> 임무를 수행해야 한다."
+                </div>
+            </div>
+        </article>
+
+        <!-- Step 1~2: LLM Layer -->
+        <article class="card-box" id="card-llm">
+            <div class="cb-body" id="llm-content" style="padding: 40px 20px; opacity: 0;">
+                <i class="fa-solid fa-brain llm-icon"></i>
+                <div class="llm-title">LLM 분석 레이어</div>
+                <div class="llm-sub">문맥 해석 및 논리 변수 추출</div>
+            </div>
+        </article>
+
+        <!-- Step 2~3: Variable Tree -->
+        <article class="card-box" id="card-tree">
+            <div class="var-node" id="node-obj"><i class="fa-solid fa-cube"></i> Obj = drone_v2</div>
+            <div class="var-node" id="node-wind"><i class="fa-solid fa-wind"></i> Env.Wind = 50</div>
+            <div class="var-node" id="node-time"><i class="fa-regular fa-clock"></i> Target.Time >= 20</div>
+        </article>
+
+        <!-- Step 3~4: Code API Caller -->
+        <article class="card-box" id="card-code">
+            <div class="cb-header"><i class="fa-solid fa-code"></i> 자체 API 매핑 코드 (LLM Generated)</div>
+            <div class="cb-body">
+                <div class="code-line" id="code-1"><span class="c-keyword">import</span> siera_physics <span class="c-keyword">as</span> sp <span class="c-comment"># 엔진 로드</span></div>
+                <br>
+                <div class="code-line" id="code-2"><span class="c-comment"># 추출된 변수 매핑</span></div>
+                <div class="code-line" id="code-3">env = sp.<span class="hl-span c-func" id="span-func-wind">WindForce</span>(speed=<span class="hl-span c-string" id="span-wind">50</span>)</div>
+                <br>
+                <div class="code-line" id="code-4"><span class="c-comment"># 검증 API 호출 (연산은 내부 수행)</span></div>
+                <div class="code-line" id="code-5">result = sp.<span class="hl-span c-func" id="span-func-hover">verify_hover</span>(obj=<span class="hl-span c-string" id="span-obj">'drone_v2'</span>, env=env)</div>
+                <br>
+                <div class="code-line" id="code-6"><span class="c-keyword">assert</span> result.time >= <span class="hl-span c-string" id="span-time">20</span></div>
+            </div>
+        </article>
+
+        <!-- Step 4~5: SIERA Physics Engine -->
+        <article class="card-box" id="card-engine">
+            <i class="fa-solid fa-gear gear-bg" id="engine-gear"></i>
+            <div class="engine-hub" id="engine-hub">
+                <div class="eh-title">SIERA<br>PHYSICS</div>
+                <div class="eh-sub">DETERMINISTIC<br>ENGINE</div>
+            </div>
+            
+            <!-- 다수 API 노드 생태계 -->
+            <div class="api-node" id="api-windforce">def WindForce()</div>
+            <div class="api-node" id="api-drag">def DragModel()</div>
+            <div class="api-node" id="api-verify">def verify_hover()</div>
+            <div class="api-node" id="api-thrust">def ThrustCalc()</div>
+            <div class="api-node" id="api-battery">def BatterySim()</div>
+            <div class="api-node" id="api-path">def PathPlan()</div>
+        </article>
+
+        <!-- Step 5: Result -->
+        <article class="card-box" id="card-result">
+            <div class="cb-header"><i class="fa-solid fa-flag-checkered"></i> 검증 결과</div>
+            <div class="cb-body" id="res-content" style="padding: 20px; opacity: 0;">
+                <div class="res-data">
+                    > Drag: 14.2 N<br>
+                    > Req Thrust: +35%<br>
+                    > Drain: 6500mAh<br>
+                    > Max Time: 12.5m<br><br>
+                    <span style="color:#da1e28;font-weight:700;">[FAIL] Requirement not met.</span>
+                </div>
+                <div class="trust-badge">
+                    <div class="tb-title"><i class="fa-solid fa-shield-halved"></i> 환각 제로</div>
+                    <div class="tb-sub">LLM은 API만 호출할 뿐, 실제 물리 연산은 자체 엔진이 100% 수행합니다.</div>
+                </div>
+            </div>
+        </article>
+
+    </section>
+</main>
+
+<script>
+    /* ─── STREAMING_CHUNK:Initialization & Utilities ─── */
+    let currentStep = 0;
+    const maxSteps = 5;
+    let stepTl = null; 
+    let activeConnections = []; 
+
+    function scaleSlide() {
+        const slide = document.getElementById('slide-wrapper');
+        const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720) * 0.95; 
+        slide.style.transform = `scale(${scale})`;
+    }
+
+    window.onload = () => {
+        scaleSlide();
+        document.addEventListener('keydown', handleKeydown);
+        gsap.ticker.add(drawConnections); 
+    };
+    window.addEventListener('resize', scaleSlide);
+
+    /* ─── STREAMING_CHUNK:Dynamic Path Drawing System ─── */
+    function createConnection(el1Id, el2Id, color, marker, idStr) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', '3'); 
+        if(marker) path.setAttribute('marker-end', `url(#${marker})`);
+        
+        document.getElementById('dynamic-lines').appendChild(path);
+        
+        const conn = { id: idStr, el1: el1Id, el2: el2Id, path: path, progress: 0 };
+        activeConnections.push(conn);
+        return conn;
+    }
+
+    function drawConnections() {
+        const canvasRect = document.querySelector('.scene-canvas').getBoundingClientRect();
+
+        activeConnections.forEach(conn => {
+            if (conn.progress === 0) {
+                conn.path.style.opacity = 0;
+                return;
+            }
+            conn.path.style.opacity = 1;
+
+            const el1 = document.getElementById(conn.el1);
+            const el2 = document.getElementById(conn.el2);
+            if(!el1 || !el2) return;
+
+            const rect1 = el1.getBoundingClientRect();
+            const rect2 = el2.getBoundingClientRect();
+
+            const x1 = rect1.right - canvasRect.left;
+            const y1 = rect1.top + (rect1.height / 2) - canvasRect.top;
+            const x2 = rect2.left - canvasRect.left - 8; 
+            const y2 = rect2.top + (rect2.height / 2) - canvasRect.top;
+
+            const cx1 = x1 + Math.abs(x2 - x1) * 0.4;
+            const cx2 = x2 - Math.abs(x2 - x1) * 0.4;
+
+            const d = `M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`;
+            conn.path.setAttribute('d', d);
+
+            const len = conn.path.getTotalLength() || 1000;
+            conn.path.style.strokeDasharray = len;
+            conn.path.style.strokeDashoffset = len * (1 - conn.progress);
+        });
+    }
+
+    /* ─── STREAMING_CHUNK:State Machine & Fast-Forward Handler ─── */
+    function handleKeydown(e) {
+        if (e.key === 'ArrowRight') {
+            // 진행 중인 애니메이션이 있으면 즉시 스킵(Fast-forward)
+            if (stepTl && stepTl.isActive()) {
+                stepTl.progress(1);
+            } else if (currentStep < maxSteps) {
+                currentStep++;
+                playStep(currentStep);
+            }
+        } else if (e.key === 'ArrowLeft') {
+            if (stepTl && stepTl.isActive()) {
+                stepTl.progress(1);
+            } else if (currentStep > 0) {
+                currentStep--;
+                resetBoard();
+                for(let i = 1; i <= currentStep; i++) {
+                    playStep(i, true);
+                }
+            }
+        }
+    }
+
+    function resetBoard() {
+        if(stepTl) stepTl.kill();
+        activeConnections = [];
+        document.getElementById('dynamic-lines').innerHTML = '';
+        
+        gsap.set('.card-box', { left: 1400, opacity: 0 });
+        gsap.set('.var-node, .code-line, #res-content, #llm-content', { opacity: 0 });
+        
+        document.querySelectorAll('.hl-span').forEach(el => el.classList.remove('active-var', 'active-api'));
+        document.querySelectorAll('.api-node').forEach(el => { el.classList.remove('target-node'); el.style.opacity = 0.2; });
+        
+        gsap.set('#api-windforce', { opacity: 0 });
+        gsap.set('#api-verify', { opacity: 0 });
+        
+        gsap.set('#engine-gear', { rotation: 0 });
+        gsap.set('#engine-hub', { scale: 1 });
+    }
+
+    /* ─── STREAMING_CHUNK:Sequential Timeline Animations ─── */
+    function playStep(step, isInstant = false) {
+        if (stepTl) stepTl.kill();
+        stepTl = gsap.timeline();
+        
+        // 애니메이션 속도 대폭 단축 (카메라 이동 0.35s, 선 긋기 0.25s)
+        const dur = isInstant ? 0 : 0.35;      
+        const lineDur = isInstant ? 0 : 0.25;  
+        const fadeDur = isInstant ? 0 : 0.2;
+
+        switch(step) {
+            case 1: 
+                // [Step 1] 자연어 -> LLM
+                // LLM 박스는 위치만 잡아두고 내용은 투명 상태
+                stepTl.to('#card-nl', { left: 60, opacity: 1, duration: dur, ease: "power2.out" })
+                      .to('#card-llm', { left: 800, opacity: 1, duration: dur, ease: "power2.out" }, "<");
+                
+                const c1 = createConnection('card-nl', 'card-llm', '#8d8d8d', 'arrowGray', 'c1');
+                
+                // 선이 먼저 뻗어나간 후, LLM 내용 페이드인
+                stepTl.to(c1, { progress: 1, duration: lineDur }, "+=0.1")
+                      .to('#llm-content', { opacity: 1, duration: fadeDur });
+                break;
+
+            case 2: 
+                // [Step 2] 트리 노드 (변수 추출)
+                stepTl.to('#card-nl', { left: -500, opacity: 0, duration: dur, ease: "power2.inOut" })
+                      .to('#card-llm', { left: 60, duration: dur, ease: "power2.inOut" }, "<")
+                      .to('#card-tree', { left: 850, opacity: 1, duration: dur, ease: "power2.out" }, "<");
+                
+                const n1 = createConnection('card-llm', 'node-obj', '#8a3ffc', 'arrowPurple', 'c2');
+                const n2 = createConnection('card-llm', 'node-wind', '#8a3ffc', 'arrowPurple', 'c3');
+                const n3 = createConnection('card-llm', 'node-time', '#8a3ffc', 'arrowPurple', 'c4');
+                
+                // 선이 뻗어나가고 -> 타겟 노드 페이드인 (순차적)
+                stepTl.to(n1, { progress: 1, duration: lineDur })
+                      .to('#node-obj', { opacity: 1, duration: fadeDur })
+                      
+                      .to(n2, { progress: 1, duration: lineDur }, "-=0.1")
+                      .to('#node-wind', { opacity: 1, duration: fadeDur })
+                      
+                      .to(n3, { progress: 1, duration: lineDur }, "-=0.1")
+                      .to('#node-time', { opacity: 1, duration: fadeDur });
+                break;
+
+            case 3: 
+                // [Step 3] 코드 박스 (API Caller)
+                stepTl.to('#card-llm', { left: -500, opacity: 0, duration: dur, ease: "power2.inOut" })
+                      .to('#card-tree', { left: 60, duration: dur, ease: "power2.inOut" }, "<")
+                      .to('#card-code', { left: 580, opacity: 1, duration: dur, ease: "power2.out" }, "<");
+                
+                stepTl.to('#code-1', { opacity: 1, duration: fadeDur }); // 기본 임포트문
+                
+                const m1 = createConnection('node-wind', 'span-wind', '#8a3ffc', 'arrowPurple', 'c6');
+                const m2 = createConnection('node-obj', 'span-obj', '#8a3ffc', 'arrowPurple', 'c5');
+                const m3 = createConnection('node-time', 'span-time', '#8a3ffc', 'arrowPurple', 'c7');
+                
+                // 변수 노드에서 화살표 발사 -> 타겟 코드라인 등장 및 하이라이트
+                stepTl.to(m1, { progress: 1, duration: lineDur })
+                      .to(['#code-2', '#code-3'], { opacity: 1, duration: fadeDur })
+                      .add(() => document.getElementById('span-wind').classList.add('active-var'))
+                      
+                      .to(m2, { progress: 1, duration: lineDur }, "-=0.1")
+                      .to(['#code-4', '#code-5'], { opacity: 1, duration: fadeDur })
+                      .add(() => document.getElementById('span-obj').classList.add('active-var'))
+                      
+                      .to(m3, { progress: 1, duration: lineDur }, "-=0.1")
+                      .to('#code-6', { opacity: 1, duration: fadeDur })
+                      .add(() => document.getElementById('span-time').classList.add('active-var'));
+                break;
+
+            case 4: 
+                // [Step 4] 엔진 구동부 (수많은 생태계 중 2개 픽픽)
+                stepTl.to('#card-tree', { left: -500, opacity: 0, duration: dur, ease: "power2.inOut" })
+                      .to('#card-code', { left: 60, duration: dur, ease: "power2.inOut" }, "<")
+                      .to('#card-engine', { left: 740, opacity: 1, duration: dur, ease: "power2.out" }, "<");
+                
+                stepTl.add(() => document.querySelectorAll('.hl-span').forEach(el => el.classList.remove('active-var')));
+
+                const a1 = createConnection('span-func-wind', 'api-windforce', '#0f62fe', 'arrowBlue', 'c8');
+                const a2 = createConnection('span-func-hover', 'api-verify', '#0f62fe', 'arrowBlue', 'c9');
+                
+                // 코드 함수부에서 화살표 발사 -> 타겟 API 노드 등장 및 하이라이트 연결
+                stepTl.to(a1, { progress: 1, duration: lineDur })
+                      .to('#api-windforce', { opacity: 1, duration: fadeDur })
+                      .add(() => {
+                          document.getElementById('span-func-wind').classList.add('active-api');
+                          document.getElementById('api-windforce').classList.add('target-node');
+                      })
+                      
+                      .to(a2, { progress: 1, duration: lineDur }, "-=0.1")
+                      .to('#api-verify', { opacity: 1, duration: fadeDur })
+                      .add(() => {
+                          document.getElementById('span-func-hover').classList.add('active-api');
+                          document.getElementById('api-verify').classList.add('target-node');
+                      });
+                break;
+
+            case 5: 
+                // [Step 5] 결과 도출 및 환각 제로 뱃지
+                stepTl.to('#card-code', { left: -700, opacity: 0, duration: dur, ease: "power2.inOut" })
+                      .to('#card-engine', { left: 60, duration: dur, ease: "power2.inOut" }, "<")
+                      .to('#card-result', { left: 800, opacity: 1, duration: dur, ease: "power2.out" }, "<");
+                
+                stepTl.add(() => document.querySelectorAll('.hl-span').forEach(el => el.classList.remove('active-api')));
+
+                // 기어 애니메이션
+                stepTl.to('#engine-gear', { rotation: "+=180", duration: isInstant?0:1, ease: "linear" }, "<")
+                      .to('#engine-hub', { scale: 1.1, yoyo: true, repeat: 1, duration: isInstant?0:0.15 }, "<");
+                
+                const r1 = createConnection('engine-hub', 'card-result', '#198038', 'arrowGreen', 'c12');
+                
+                // 화살표 뻗어나가고 -> 결과창 등장
+                stepTl.to(r1, { progress: 1, duration: lineDur })
+                      .to('#res-content', { opacity: 1, duration: fadeDur });
+                break;
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIERA — SE Tailoring (16:9)</title>
+    <!-- Font Awesome 6.5.1 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    <!-- GSAP for Smooth Fluid Physics Animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@200;300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+        /* ─── STREAMING_CHUNK:Configuring Base Styles and Reset ─── */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #e5e5e5;
+            font-family: 'IBM Plex Sans', 'Pretendard', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            font-feature-settings: "ss03", "cv11";
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ─── 16:9 고정 슬라이드 래퍼 ─── */
+        .slide-wrapper {
+            width: 1280px;
+            height: 720px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+            transform-origin: center center;
+            overflow: hidden;
+            padding: 50px 60px; 
+        }
+
+        /* ─── 배경 패턴 및 워터마크 ─── */
+        .bg-pattern {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(#ededed 1.5px, transparent 1.5px);
+            background-size: 32px 32px;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 180px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 700;
+            color: rgba(15, 98, 254, 0.02);
+            white-space: nowrap;
+            z-index: 0;
+            pointer-events: none;
+            letter-spacing: -0.02em;
+        }
+
+        /* ─── 헤더 영역 ─── */
+        .header-area {
+            position: relative;
+            z-index: 10;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .kicker {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #0f62fe;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        .main-title {
+            font-size: 40px;
+            font-weight: 200;
+            color: #161616;
+            line-height: 1.25;
+            letter-spacing: -0.015em;
+            margin-bottom: 8px;
+        }
+        .main-title strong {
+            font-weight: 700;
+            color: #0f62fe;
+        }
+
+        /* ─── STREAMING_CHUNK:Styling Grid Layout and Layout Cards ─── */
+        .main-area {
+            flex: 1;
+            display: flex;
+            align-items: stretch; 
+            justify-content: space-between;
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            gap: 24px;
+            overflow: hidden;
+        }
+
+        /* Carbon 카드 스타일 */
+        .engine-card {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            border-radius: 0px; /* Carbon UI 표준 준수 */
+        }
+        .col-standards { width: 380px; }
+        .col-tailored { width: 440px; }
+        .col-metrics { width: 320px; }
+
+        /* 카드 헤더 */
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+        .card-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 0px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 16px;
+            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.15);
+        }
+        .card-title-area { flex: 1; min-width: 0; }
+        .card-title { font-size: 15px; font-weight: 700; color: #161616; margin-bottom: 1px; }
+        .card-tag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; color: #8d8d8d; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* 카드 바디 */
+        .card-body {
+            padding: 16px;
+            background: #fafafa;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 원본 표준 프로세스 박스 */
+        .process-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 2px;
+        }
+
+        .process-box {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-left: 4px solid #8d8d8d;
+            padding: 12px;
+            user-select: none;
+            transition: border-color 0.15s ease, background-color 0.15s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border-radius: 0px;
+        }
+
+        /* 박스 내부 요소 */
+        .pb-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            color: #8d8d8d;
+        }
+        .pb-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #161616;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pb-doc {
+            font-size: 11px;
+            color: #525252;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ─── STREAMING_CHUNK:Designing Interactive State Classes ─── */
+        /* 적용/유지 상태 (Black) */
+        .state-black-active { 
+            background: #161616 !important; 
+            border-color: #161616 !important;
+            border-left-color: #393939 !important;
+        }
+        .state-black-active * { color: #ffffff !important; }
+
+        /* 병합 상태 (Blue) */
+        .state-merge-active { 
+            background: #0f62fe !important; 
+            border-color: #0f62fe !important;
+            border-left-color: #002d9c !important;
+        }
+        .state-merge-active * { color: #ffffff !important; }
+
+        /* 삭제 상태 (Red) */
+        .state-delete-active { 
+            background: #da1e28 !important; 
+            border-color: #da1e28 !important;
+            border-left-color: #750e13 !important;
+        }
+        .state-delete-active * { color: #ffffff !important; }
+
+        /* 분할 상태 (Cyan) */
+        .state-split-active { 
+            background: #009d9a !important; 
+            border-color: #009d9a !important;
+            border-left-color: #005d5d !important;
+        }
+        .state-split-active * { color: #ffffff !important; }
+
+        /* 테일러링 결과 박스 스타일 */
+        .tailored-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-right: 2px;
+        }
+        
+        .empty-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #a8a8a8;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .empty-placeholder i { font-size: 32px; opacity: 0.7; }
+        .empty-placeholder span { font-size: 12px; font-weight: 500; font-family: 'IBM Plex Mono', monospace; }
+
+        .tailored-card {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-left: 5px solid #161616;
+            padding: 14px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-radius: 0px;
+        }
+        .tc-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .tc-badge {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            text-transform: uppercase;
+        }
+        .tc-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #161616;
+        }
+        .tc-doc-info {
+            background: #f4f4f4;
+            border: 1px solid #e0e0e0;
+            padding: 8px;
+            font-size: 11px;
+            color: #525252;
+            word-break: keep-all;
+        }
+
+        /* 지표 영역 */
+        .metrics-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .metric-block {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .metric-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #525252;
+        }
+        .metric-num-wrap {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 700;
+            color: #161616;
+        }
+        .metric-value {
+            font-size: 32px;
+            line-height: 1;
+        }
+        .metric-unit {
+            font-size: 14px;
+            margin-left: 2px;
+        }
+
+        /* 프로그레스 바 */
+        .progress-track {
+            height: 6px;
+            background: #e0e0e0;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 100%;
+            transform-origin: left center;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* AI 리포트 박스 (문서 절감율 전용으로 수정) */
+        .report-highlight {
+            background: #edf9f0;
+            border: 1px solid #c8e8d4;
+            border-left: 4px solid #24a148;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: auto;
+        }
+        .rh-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: #198038;
+        }
+        .rh-badge i { animation: pulse-icon 2s infinite; }
+        @keyframes pulse-icon {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.15); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .rh-value-wrap {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 700;
+            color: #198038;
+            line-height: 1;
+        }
+        .rh-value-wrap .val { font-size: 64px; }
+        .rh-value-wrap .unit { font-size: 32px; }
+
+        /* 복제 노드 비행용 클래스 */
+        .flying-clone {
+            position: absolute;
+            z-index: 9999;
+            pointer-events: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        /* 스크롤바 제어 */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c6c6c6; }
+        ::-webkit-scrollbar-thumb:hover { background: #8d8d8d; }
+    </style>
+</head>
+<body>
+
+<main class="slide-wrapper" id="slide-wrapper">
+    <div class="watermark">TAILORING</div>
+
+    <!-- ─── 헤더 영역 ─── -->
+    <header class="header-area">
+        <div class="kicker">APPENDIX</div>
+        <h2 class="main-title">
+            결과에 따라 프로젝트 효율이 달라진다,<br/>
+            <strong>SE 테일러링</strong>
+        </h2>
+    </header>
+
+    <!-- ─── 메인 3단 레이아웃 영역 ─── -->
+    <section class="main-area">
+        
+        <!-- 1. 좌측: 표준 프로세스 요구사항 카드 -->
+        <article class="engine-card col-standards">
+            <div class="card-header">
+                <div class="card-icon" style="background: #0f62fe;"><i class="fa-solid fa-list-check"></i></div>
+                <div class="card-title-area">
+                    <div class="card-title">표준 요구사항</div>
+                    <span id="orig-count" style="display: none;">150</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="original-list" class="process-list">
+                    <!-- JS로 150개 표준 항목 채워짐 -->
+                </div>
+            </div>
+        </article>
+
+        <!-- 2. 중앙: 실시간 테일러링 결과 카드 -->
+        <article class="engine-card col-tailored">
+            <div class="card-header">
+                <div class="card-icon" style="background: #161616;"><i class="fa-solid fa-sliders"></i></div>
+                <div class="card-title-area">
+                    <div class="card-title">테일러링 아키텍처</div>
+                </div>
+            </div>
+            <div class="card-body" id="tailored-body">
+                <!-- 결과 리스트 -->
+                <div id="tailored-list" class="tailored-list"></div>
+                <!-- 초기 상태 안내 -->
+                <div id="empty-state" class="empty-placeholder">
+                    <i class="fa-solid fa-cube"></i>
+                    <span>READY FOR ACTION</span>
+                </div>
+            </div>
+        </article>
+
+        <!-- 3. 우측: 시뮬레이션 영향 평가 지표 -->
+        <article class="engine-card col-metrics">
+            <div class="card-header">
+                <div class="card-icon" style="background: #8a3ffc;"><i class="fa-solid fa-chart-line"></i></div>
+                <div class="card-title-area">
+                    <div class="card-title">시뮬레이션 결과</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="metrics-container">
+                    
+                    <!-- 예산 지표 -->
+                    <div class="metric-block">
+                        <div class="metric-header">
+                            <span class="metric-label">예상 프로젝트 예산</span>
+                            <div class="metric-num-wrap">
+                                <span class="metric-value" id="metric-cost">100</span><span class="metric-unit">%</span>
+                            </div>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-bar" id="bar-cost" style="background: #0f62fe;"></div>
+                        </div>
+                    </div>
+
+                    <!-- 기간 지표 -->
+                    <div class="metric-block">
+                        <div class="metric-header">
+                            <span class="metric-label">예상 수행 기간</span>
+                            <div class="metric-num-wrap">
+                                <span class="metric-value" id="metric-time">100</span><span class="metric-unit">%</span>
+                            </div>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-bar" id="bar-time" style="background: #8a3ffc;"></div>
+                        </div>
+                    </div>
+
+                    <!-- 문서 작업 절감율 강조 박스 -->
+                    <div class="report-highlight">
+                        <div class="rh-badge"><i class="fa-solid fa-file-circle-check"></i> 문서 작업 절감율</div>
+                        <div class="rh-value-wrap">
+                            <span class="val" id="metric-doc">0</span><span class="unit">%</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </article>
+
+    </section>
+</main>
+
+<script>
+    /* ─── STREAMING_CHUNK:Initializing SE Database ─── */
+    // 방대한 SE 표준 데이터 세트 생성
+    function generateMassiveSEData() {
+        const categories = [
+            { prefix: 'ACQ', name: '획득 프로세스', docs: ['요구사항 정의서', '제안요청서(RFP)', '공급업체 평가표', '획득 전략서'], count: 15, icon: 'fa-shopping-cart' },
+            { prefix: 'SPL', name: '공급 프로세스', docs: ['공급 계획서', '제품 명세서', '인도 계획서', '검수 조건서'], count: 15, icon: 'fa-cubes' },
+            { prefix: 'ORG', name: '조직 관리', docs: ['프로젝트 관리 계획서', '형상 관리 지침', '품질 보증 계획서', '위험 관리 대장'], count: 40, icon: 'fa-sitemap' },
+            { prefix: 'TECH-REQ', name: '요구/설계', docs: ['운용개념서(ConOps)', '시스템 요구규격서', '인터페이스 통제문서', '아키텍처 모델'], count: 30, icon: 'fa-drafting-compass' },
+            { prefix: 'TECH-VNV', name: '구현 및 V&V', docs: ['상세 설계서', '통합 테스트 시나리오', '시험 검증 보고서', '사용자 매뉴얼'], count: 50, icon: 'fa-clipboard-check' }
+        ];
+
+        let data = [];
+        let globalId = 1;
+
+        categories.forEach(cat => {
+            for(let i=1; i<=cat.count; i++) {
+                const docName = cat.docs[Math.floor(Math.random() * cat.docs.length)];
+                data.push({
+                    id: `p${globalId++}`,
+                    code: `${cat.prefix}-${i.toString().padStart(2, '0')}`,
+                    name: `${cat.name} 세부 절차 ${i}`,
+                    doc: `${docName} v${Math.floor(Math.random()*3)+1}.0`,
+                    icon: cat.icon
+                });
+            }
+        });
+        return data;
+    }
+
+    const masterData = generateMassiveSEData(); 
+
+    let state = {
+        available: [...masterData],
+        customMergedCount: 1,
+        isAnimating: false,
+        currentStep: 0,
+        maxStep: 12,
+        targetCost: 0, targetTime: 0, targetDoc: 0,
+        metrics: {
+            totalProcesses: masterData.length, removedCount: 0, 
+            currentCost: 100, currentTime: 100, docReduction: 0
+        }
+    };
+
+    /* ─── STREAMING_CHUNK:Configuring Slide Sizing ─── */
+    window.onload = () => {
+        scaleSlide();
+        renderList();
+        document.addEventListener('keydown', handleKeydown);
+    };
+    window.addEventListener('resize', scaleSlide);
+
+    function scaleSlide() {
+        const slide = document.getElementById('slide-wrapper');
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        const slideWidth = 1280;
+        const slideHeight = 720;
+        const scale = Math.min(windowWidth / slideWidth, windowHeight / slideHeight) * 0.95; 
+        slide.style.transform = `scale(${scale})`;
+    }
+
+    /* ─── STREAMING_CHUNK:Configuring State Machine and Step Sequences ─── */
+    async function handleKeydown(e) {
+        if (state.isAnimating) return; 
+        
+        if (e.key === 'ArrowRight') {
+            if (state.currentStep < state.maxStep) {
+                state.currentStep++;
+                state.isAnimating = true;
+                // 방향키 연타 딜레이 최소화 (150ms 후 언락 처리)
+                setTimeout(() => { state.isAnimating = false; }, 150);
+                await runStep(state.currentStep, false);
+            }
+        } else if (e.key === 'ArrowLeft') {
+            if (state.currentStep > 0) {
+                state.currentStep--;
+                state.isAnimating = true;
+                setTimeout(() => { state.isAnimating = false; }, 150);
+                await fastForwardTo(state.currentStep);
+            }
+        }
+    }
+
+    // 좌측 방향키 입력 시 고속 순간이동 롤백
+    async function fastForwardTo(targetStep) {
+        resetBoard(true);
+        for (let i = 1; i <= targetStep; i++) {
+            await runStep(i, true);
+        }
+    }
+
+    // 단계별 발표 시나리오 정의
+    async function runStep(step, isInstant) {
+        switch(step) {
+            case 1: // 1. 맨 위 프로세스 하나 채우기 (유지 목적 - 검정색)
+                await highlightItems(['p1'], 'state-black-active', isInstant);
+                break;
+            case 2: // 2. 가운데로 이동 (유지 적용)
+                await executeAction('keep', ['p1'], isInstant);
+                break;
+            case 3: // 3. 아래 3개 순차 채우기 (병합 목적 - 파란색)
+                await highlightItems(['p2', 'p3', 'p4'], 'state-merge-active', isInstant);
+                break;
+            case 4: // 4. 합쳐지며 가운데로 이동
+                await executeAction('merge', ['p2', 'p3', 'p4'], isInstant);
+                break;
+            case 5: // 5. 연속된 2개 순차 채우기 (삭제 목적 - 빨간색)
+                await highlightItems(['p5', 'p6'], 'state-delete-active', isInstant);
+                break;
+            case 6: // 6. 서서히 지워지며 소멸
+                await executeAction('delete', ['p5', 'p6'], isInstant);
+                break;
+            case 7: // 7. 연속 1개 채우기 (분할 목적 - 청록색)
+                await highlightItems(['p7'], 'state-split-active', isInstant); 
+                break;
+            case 8: // 8. 3개 분할 프로세스로 나뉘어 가운데 진입
+                await executeAction('split', ['p7'], isInstant, 3); 
+                break;
+            case 9: // 9. 원상복구
+                resetBoard(isInstant);
+                break;
+            case 10: // 10. 자동 채우기 (비효율 가상 시연 10-20% 효율)
+                await runAutoTailoring('bad', isInstant);
+                break;
+            case 11: // 11. 원상복구
+                resetBoard(isInstant);
+                break;
+            case 12: // 12. 자동 채우기 (초고효율 가상 시연 80-90% 효율)
+                await runAutoTailoring('good', isInstant);
+                break;
+        }
+    }
+
+    /* ─── STREAMING_CHUNK:Implementing Fast-paced Animation Physics ─── */
+    // 수동 선택 색칠 애니메이션 (인지 가능한 자연스러운 속도 vs 자동화 동시 처리)
+    async function highlightItems(ids, className, isInstant, isSimul = false) {
+        if (isInstant) {
+            ids.forEach(id => {
+                const el = document.getElementById(`orig-${id}`);
+                if (el) el.className = `process-box ${className}`;
+            });
+            return;
+        }
+        
+        if (isSimul) {
+            // 자동화 단계: 배치 단위 동시 선택으로 속도 극대화
+            ids.forEach(id => {
+                const el = document.getElementById(`orig-${id}`);
+                if (el) el.className = `process-box ${className}`;
+            });
+            // 칠해진 모습을 찰나(0.08초) 동안만 보여주어 속도감 극대화 (기존 0.15초에서 단축)
+            await new Promise(r => setTimeout(r, 80)); 
+        } else {
+            // 수동 단계: 순차적으로 하나씩 선택
+            for (let i = 0; i < ids.length; i++) {
+                const el = document.getElementById(`orig-${ids[i]}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    el.className = `process-box ${className}`;
+                    await new Promise(r => setTimeout(r, 150)); 
+                }
+            }
+            await new Promise(r => setTimeout(r, 100));
+        }
+    }
+
+    // 좌측 원본 리스트 렌더링
+    function renderList() {
+        const list = document.getElementById('original-list');
+        list.innerHTML = '';
+        
+        state.available.forEach(item => {
+            const box = document.createElement('div');
+            box.id = `orig-${item.id}`;
+            box.className = `process-box`;
+            
+            box.innerHTML = `
+                <div class="pb-meta">
+                    <span>${item.code}</span>
+                    <i class="fa-solid ${item.icon}"></i>
+                </div>
+                <h4 class="pb-title">${item.name}</h4>
+                <p class="pb-doc"><i class="fa-solid fa-file-invoice"></i> ${item.doc}</p>
+            `;
+            list.appendChild(box);
+        });
+        document.getElementById('orig-count').innerText = state.available.length;
+    }
+
+    // 물리적 궤적 비행 및 처리 이펙트
+    async function executeAction(actionType, targetIds, isInstant = false, partCount = 2, isSimul = false) {
+        const tailoredList = document.getElementById('tailored-list');
+        const empty = document.getElementById('empty-state');
+        const wrapper = document.getElementById('slide-wrapper');
+        
+        if (empty && empty.style.display !== 'none') {
+            empty.style.display = 'none';
+        }
+
+        const items = state.available.filter(i => targetIds.includes(i.id));
+        const elements = targetIds.map(id => document.getElementById(`orig-${id}`)).filter(el => el);
+
+        if (elements.length === 0) return; 
+
+        // 시뮬레이션 모드일 경우 비행 속도를 초고속(0.12초)으로 상향, 수동일 경우 0.6초
+        const flyDuration = isSimul ? 0.12 : 0.6;
+
+        if (actionType === 'delete') {
+            if (!isInstant) {
+                await new Promise(resolve => {
+                    gsap.to(elements, {
+                        opacity: 0, x: -30, duration: flyDuration * 0.5,
+                        onComplete: () => {
+                            gsap.to(elements, { height: 0, padding: 0, border: 0, margin: 0, duration: flyDuration * 0.3, onComplete: resolve });
+                        }
+                    });
+                });
+            }
+            elements.forEach(el => el.remove());
+            state.metrics.removedCount += targetIds.length;
+        } 
+        else {
+            // 빈 공간 홀더 생성
+            const placeholder = document.createElement('div');
+            placeholder.className = 'tailored-card opacity-0';
+            placeholder.innerHTML = `<div style="height: 50px;"></div>`;
+            tailoredList.appendChild(placeholder);
+            if (!isInstant) tailoredList.scrollTop = tailoredList.scrollHeight; 
+            
+            const targetRect = placeholder.getBoundingClientRect();
+            const wrapperRect = wrapper.getBoundingClientRect();
+            
+            const scaleFactor = wrapperRect.width / 1280;
+            const targetRelLeft = (targetRect.left - wrapperRect.left) / scaleFactor;
+            const targetRelTop = (targetRect.top - wrapperRect.top) / scaleFactor;
+            const targetRelWidth = targetRect.width / scaleFactor;
+
+            const clones = [];
+
+            elements.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                if (!isInstant) gsap.to(el, { height: 0, padding: 0, border: 0, margin: 0, opacity: 0, duration: 0.2 });
+
+                if (!isInstant && clones.length < 5) {  
+                    const clone = el.cloneNode(true);
+                    clone.removeAttribute('id'); 
+                    clone.className = `process-box flying-clone ${el.className.split(' ').find(c => c.startsWith('state-'))}`;
+                    
+                    clone.style.top = `${(rect.top - wrapperRect.top) / scaleFactor}px`; 
+                    clone.style.left = `${(rect.left - wrapperRect.left) / scaleFactor}px`; 
+                    clone.style.width = `${rect.width / scaleFactor}px`;
+                    wrapper.appendChild(clone);
+                    clones.push(clone);
+                }
+            });
+
+            if (clones.length > 0 && !isInstant) {
+                await new Promise(resolve => {
+                    gsap.to(clones, {
+                        top: targetRelTop, left: targetRelLeft, width: targetRelWidth,
+                        opacity: actionType === 'merge' ? 0.7 : 1, 
+                        duration: flyDuration, ease: "power2.inOut",
+                        onComplete: resolve
+                    });
+                });
+                clones.forEach(c => c.remove());
+            }
+            
+            elements.forEach(el => el.remove());
+            
+            // 테일러링 카드 결과 삽입
+            if (actionType === 'merge') {
+                const resultCard = document.createElement('div');
+                const mergedDocs = [...new Set(items.map(i => i.doc.split(' v')[0]))].slice(0, 3).join(', ') + ' 통합 규격서';
+                resultCard.className = 'tailored-card';
+                resultCard.style.borderLeftColor = '#0f62fe'; // 병합: 파란색
+                resultCard.innerHTML = `
+                    <div class="tc-header">
+                        <h4 class="tc-title">통합 프로세스 ${state.customMergedCount++}</h4>
+                        <span class="tc-badge" style="background: #e3edff; color: #0f62fe;">병합됨</span>
+                    </div>
+                    <div class="tc-doc-info">
+                        <strong>통합 산출물:</strong> ${mergedDocs}
+                        <div style="font-size: 9.5px; color: #a8a8a8; margin-top: 2px;">수동 병합 (총 ${items.length}개 요구사항 통합)</div>
+                    </div>
+                `;
+                tailoredList.insertBefore(resultCard, placeholder);
+                if (!isInstant) gsap.fromTo(resultCard, { scale: 0.95, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3 });
+                state.metrics.removedCount += (targetIds.length - 1); 
+            } else if (actionType === 'keep') {
+                items.forEach(item => {
+                    const resultCard = document.createElement('div');
+                    resultCard.className = 'tailored-card';
+                    resultCard.style.borderLeftColor = '#161616'; // 유지: 검은색
+                    resultCard.innerHTML = `
+                        <div class="tc-header">
+                            <h4 class="tc-title" style="font-weight: 500;">${item.name}</h4>
+                            <span class="tc-badge" style="background: #e0e0e0; color: #161616;">유지됨</span>
+                        </div>
+                        <div class="tc-doc-info" style="font-size: 10.5px;">
+                            <strong>산출물:</strong> ${item.doc}
+                        </div>
+                    `;
+                    tailoredList.insertBefore(resultCard, placeholder);
+                    if (!isInstant) gsap.fromTo(resultCard, { scale: 0.95, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3 });
+                });
+            } else if (actionType === 'split') {
+                const item = items[0];
+                const parts = ['핵심 모듈 파트', '상세 검증 보조 파트', '상용 연동 지침 파트'];
+                
+                parts.forEach((part, idx) => {
+                    const resultCard = document.createElement('div');
+                    resultCard.className = 'tailored-card';
+                    resultCard.style.borderLeftColor = '#009d9a'; // 분할: 청록색
+                    resultCard.innerHTML = `
+                        <div class="tc-header">
+                            <h4 class="tc-title">${item.name} - ${part}</h4>
+                            <span class="tc-badge" style="background: #e5f6f6; color: #009d9a;">분할됨</span>
+                        </div>
+                        <div class="tc-doc-info">
+                            <strong>개별 산출물:</strong> ${item.doc.split(' v')[0]} [Part ${String.fromCharCode(65 + idx)}]
+                        </div>
+                    `;
+                    tailoredList.insertBefore(resultCard, placeholder);
+                    if (!isInstant) gsap.fromTo(resultCard, { scale: 0.95, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3 });
+                });
+                state.metrics.removedCount -= (partCount - 1); 
+            }
+
+            placeholder.remove();
+        }
+
+        state.available = state.available.filter(i => !targetIds.includes(i.id));
+        document.getElementById('orig-count').innerText = state.available.length;
+        updateMetrics(isInstant);
+    }
+
+    // 보드 리셋
+    function resetBoard(isInstant = false) {
+        state.available = [...masterData];
+        state.customMergedCount = 1;
+        state.metrics = { totalProcesses: masterData.length, removedCount: 0, currentCost: 100, currentTime: 100, docReduction: 0 };
+        
+        document.getElementById('tailored-list').innerHTML = '';
+        const empty = document.getElementById('empty-state');
+        if (empty) empty.style.display = 'flex';
+        
+        renderList();
+        updateMetrics(true);
+    }
+
+    /* ─── STREAMING_CHUNK:Handling Rapid Keypress Inputs ─── */
+    // 2초 미만의 초고속 대량 자동 시뮬레이션 제어 (최소 20개 단위 묶음 처리)
+    async function runAutoTailoring(scenario, isInstant = false) {
+        state.targetCost = scenario === 'bad' ? Math.floor(Math.random() * 11) + 80 : Math.floor(Math.random() * 11) + 10;
+        state.targetTime = scenario === 'bad' ? Math.floor(Math.random() * 11) + 80 : Math.floor(Math.random() * 11) + 10;
+        state.targetDoc = scenario === 'bad' ? Math.floor(Math.random() * 11) + 10 : Math.floor(Math.random() * 11) + 80;
+
+        if (isInstant) {
+            state.available = [];
+            document.getElementById('original-list').innerHTML = '';
+            document.getElementById('orig-count').innerText = 0;
+            
+            const tailoredList = document.getElementById('tailored-list');
+            tailoredList.innerHTML = `
+                <div class="empty-placeholder" style="color: #198038;">
+                    <i class="fa-solid fa-circle-check" style="font-size: 42px;"></i>
+                    <span style="font-weight: 700; color: #161616;">자동화 테일러링 완료</span>
+                    <span style="font-size: 11px; color: #525252; margin-top: -5px;">
+                        ${scenario === 'bad' ? '보수적 규격 준수 (비효율)' : 'SIERA 초경량 아키텍처 (성공)'}
+                    </span>
+                </div>
+            `;
+            
+            state.metrics.currentCost = state.targetCost;
+            state.metrics.currentTime = state.targetTime;
+            state.metrics.docReduction = state.targetDoc;
+            updateMetrics(true);
+            return;
+        }
+
+        let remaining = [...state.available];
+        
+        // 가중치 확률 밸런싱
+        let pDel = scenario === 'good' ? 0.45 : 0.05;
+        let pMerge = scenario === 'good' ? 0.45 : 0.05;
+        let pSplit = scenario === 'good' ? 0.03 : 0.45;
+        let pKeep = scenario === 'good' ? 0.07 : 0.45;
+        
+        const sumP = pDel + pMerge + pSplit + pKeep;
+        const tDel = pDel / sumP;
+        const tMerge = tDel + (pMerge / sumP);
+        let tSplit = tMerge + (pSplit / sumP);
+
+        while(remaining.length > 0) {
+            // 한 단계에 최소 25개 이상의 프로세스를 무더기로 처리해 실행 시간 극단적으로 최적화
+            let batchSize = Math.min(25, remaining.length);
+            const rand = Math.random();
+            let batchIds = [];
+            
+            if (rand < tDel) { 
+                batchIds = remaining.splice(0, batchSize).map(i => i.id);
+                await highlightItems(batchIds, 'state-delete-active', false, true);
+                await executeAction('delete', batchIds, false, 2, true);
+            } else if (rand < tMerge && remaining.length > 2) { 
+                batchIds = remaining.splice(0, batchSize).map(i => i.id);
+                await highlightItems(batchIds, 'state-merge-active', false, true);
+                await executeAction('merge', batchIds, false, 2, true);
+            } else if (rand < tSplit && remaining.length > 0) {
+                let splitBatch = Math.min(6, remaining.length);
+                batchIds = remaining.splice(0, splitBatch).map(i => i.id);
+                await highlightItems(batchIds, 'state-split-active', false, true);
+                await executeAction('split', batchIds, false, 3, true);
+            } else { 
+                batchIds = remaining.splice(0, batchSize).map(i => i.id);
+                await highlightItems(batchIds, 'state-black-active', false, true);
+                await executeAction('keep', batchIds, false, 2, true);
+            }
+
+            // 실시간 가상 계기판 지표 반영
+            const progress = 1 - (remaining.length / masterData.length);
+            const currCost = Math.floor(100 - ((100 - state.targetCost) * progress));
+            const currTime = Math.floor(100 - ((100 - state.targetTime) * progress));
+            const currDoc = Math.floor(state.targetDoc * progress);
+            
+            document.getElementById("metric-cost").innerText = currCost;
+            document.getElementById("metric-time").innerText = currTime;
+            document.getElementById("metric-doc").innerText = currDoc;
+            document.getElementById('bar-cost').style.transform = `scaleX(${currCost / 100})`;
+            document.getElementById('bar-time').style.transform = `scaleX(${currTime / 100})`;
+        }
+
+        state.metrics.currentCost = state.targetCost;
+        state.metrics.currentTime = state.targetTime;
+        state.metrics.docReduction = state.targetDoc;
+        updateMetrics(true);
+        
+        gsap.fromTo(".metric-value", 
+            { scale: 1.25, color: '#0f62fe' }, 
+            { scale: 1, color: '#161616', duration: 0.4, ease: "back.out(2)" }
+        );
+    }
+
+    // 스코어보드 및 프로그레스 바 수치 보정
+    function updateMetrics(instant = false) {
+        const removed = state.metrics.removedCount;
+        const total = state.metrics.totalProcesses;
+        const impactRatio = (removed / total) * 1.6; 
+        
+        let newCost = Math.max(15, Math.floor(100 - (impactRatio * 70)));
+        let newTime = Math.max(10, Math.floor(100 - (impactRatio * 85)));
+        let docRed = Math.max(-20, Math.min(99, Math.floor(impactRatio * 100)));
+
+        if(state.targetCost > 0 && state.available.length === 0) {
+            newCost = state.targetCost;
+            newTime = state.targetTime;
+            docRed = state.targetDoc;
+        }
+
+        if(instant) {
+            document.getElementById("metric-cost").innerText = newCost;
+            document.getElementById("metric-time").innerText = newTime;
+            document.getElementById("metric-doc").innerText = docRed;
+        } else {
+            animateNumber("metric-cost", state.metrics.currentCost, newCost);
+            animateNumber("metric-time", state.metrics.currentTime, newTime);
+            animateNumber("metric-doc", state.metrics.docReduction, docRed);
+        }
+
+        document.getElementById('bar-cost').style.transform = `scaleX(${Math.min(100, Math.max(0, newCost)) / 100})`;
+        document.getElementById('bar-time').style.transform = `scaleX(${Math.min(100, Math.max(0, newTime)) / 100})`;
+
+        state.metrics.currentCost = newCost;
+        state.metrics.currentTime = newTime;
+        state.metrics.docReduction = docRed;
+    }
+
+    function animateNumber(id, start, end) {
+        const obj = document.getElementById(id);
+        if(!obj) return;
+        const duration = 350; 
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerText = Math.floor(progress * (end - start) + start);
+            if (progress < 1) window.requestAnimationFrame(step);
+            else obj.innerText = end; 
+        };
+        window.requestAnimationFrame(step);
+    }
+</script>
+</body>
+</html>
